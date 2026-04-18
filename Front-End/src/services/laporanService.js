@@ -1,0 +1,168 @@
+import { supabase } from '../lib/supabase';
+
+// Mock user ID (since we don't have full Auth implemented yet in this MVP)
+const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000'; 
+
+export async function createLaporan(data) {
+  try {
+    const { data: result, error } = await supabase
+      .from('laporan')
+      .insert([
+        {
+          pelapor_id: MOCK_USER_ID, 
+          kecamatan_id: data.kecamatan_id,
+          kelurahan_id: data.kelurahan_id,
+          deskripsi: data.deskripsi,
+          alamat: data.alamat,
+          foto_url: data.foto_url,
+          status: 'pending'
+        }
+      ])
+      .select();
+
+    if (error) throw error;
+    
+    // Also insert to history_laporan
+    if (result && result.length > 0) {
+      await supabase.from('history_laporan').insert([
+        {
+          laporan_id: result[0].id,
+          status: 'pending',
+          changed_by: MOCK_USER_ID
+        }
+      ]);
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error creating laporan:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getLaporanByUser() {
+  try {
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan )
+      `)
+      .eq('pelapor_id', MOCK_USER_ID)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error getting laporan:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+export async function getLaporanById(id) {
+  try {
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan ),
+        profiles ( id, nama )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    // Get history
+    const { data: history } = await supabase
+      .from('history_laporan')
+      .select('*')
+      .eq('laporan_id', id)
+      .order('created_at', { ascending: true });
+
+    // Get bukti_selesai
+    const { data: bukti } = await supabase
+      .from('bukti_selesai')
+      .select('*')
+      .eq('laporan_id', id)
+      .maybeSingle();
+
+    return { 
+      success: true, 
+      data: { ...data, history: history || [], bukti: bukti || null } 
+    };
+  } catch (error) {
+    console.error('Error getting laporan detail:', error);
+    return { success: false, error: error.message, data: null };
+  }
+}
+
+export async function deleteLaporan(id) {
+  try {
+    const { error } = await supabase
+      .from('laporan')
+      .delete()
+      .eq('id', id)
+      .eq('pelapor_id', MOCK_USER_ID)
+      .eq('status', 'pending');
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting laporan:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getKecamatan() {
+  try {
+    const { data, error } = await supabase.from('kecamatan').select('*').order('nama_kecamatan');
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching kecamatan:', error);
+    return [];
+  }
+}
+
+export async function getKelurahan(kecamatanId) {
+  if (!kecamatanId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('kelurahan')
+      .select('*')
+      .eq('kecamatan_id', kecamatanId)
+      .order('nama_kelurahan');
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching kelurahan:', error);
+    return [];
+  }
+}
+
+export async function uploadFoto(file) {
+  if (!file) return null;
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${MOCK_USER_ID}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('laporan-photos')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('laporan-photos')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    return null;
+  }
+}
