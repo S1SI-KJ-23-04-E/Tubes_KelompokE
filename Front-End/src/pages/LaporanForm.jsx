@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getKecamatan, getKelurahan, createLaporan, uploadFoto } from '../services/laporanService';
 import { ArrowLeft, Upload } from 'lucide-react';
+import Select from 'react-select';
 
 export default function LaporanForm() {
   const navigate = useNavigate();
@@ -19,18 +20,27 @@ export default function LaporanForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getKecamatan().then(setKecamatans);
+    getKecamatan().then(data => {
+      const options = data.map(k => ({ value: k.id, label: k.nama_kecamatan }));
+      setKecamatans(options);
+    });
   }, []);
 
-  const handleKecamatanChange = async (e) => {
-    const id = e.target.value;
+  const handleKecamatanChange = async (selectedOption) => {
+    const id = selectedOption ? selectedOption.value : '';
     setFormData(prev => ({ ...prev, kecamatan_id: id, kelurahan_id: '' }));
     if (id) {
       const data = await getKelurahan(id);
-      setKelurahans(data);
+      const options = data.map(k => ({ value: k.id, label: k.nama_kelurahan }));
+      setKelurahans(options);
     } else {
       setKelurahans([]);
     }
+  };
+
+  const handleKelurahanChange = (selectedOption) => {
+    const id = selectedOption ? selectedOption.value : '';
+    setFormData(prev => ({ ...prev, kelurahan_id: id }));
   };
 
   const handleFotoChange = (e) => {
@@ -43,6 +53,9 @@ export default function LaporanForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.kecamatan_id || !formData.kelurahan_id) {
+      return alert('Harap pilih Kecamatan dan Kelurahan');
+    }
     if (formData.deskripsi.length < 20) {
       return alert('Deskripsi minimal 20 karakter');
     }
@@ -63,6 +76,34 @@ export default function LaporanForm() {
     }
   };
 
+  // Custom filter to only match from the start of the string
+  const customFilter = (option, inputValue) => {
+    return option.label.toLowerCase().startsWith(inputValue.toLowerCase());
+  };
+
+  // Custom styles for react-select to match tailwind theme
+  const customStyles = {
+    control: (base, state) => ({
+      ...base,
+      border: state.isFocused ? '2px solid #6366f1' : '1px solid #e2e8f0', // indigo-500 or slate-200
+      borderRadius: '0.75rem', // xl
+      padding: '4px',
+      backgroundColor: '#f8fafc', // slate-50
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: state.isFocused ? '#6366f1' : '#cbd5e1'
+      }
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected ? '#4f46e5' : state.isFocused ? '#e0e7ff' : null,
+      color: state.isSelected ? 'white' : '#0f172a',
+      '&:active': {
+        backgroundColor: '#4f46e5'
+      }
+    })
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8">
       <button onClick={() => navigate(-1)} className="flex items-center text-slate-500 hover:text-indigo-600 font-medium mb-6 transition-colors">
@@ -80,33 +121,31 @@ export default function LaporanForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Kecamatan</label>
-              <select 
-                required
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-3.5 transition-all outline-none"
-                value={formData.kecamatan_id}
+              <Select 
+                options={kecamatans}
+                placeholder="Cari Kecamatan..."
+                isClearable
+                isSearchable
+                filterOption={customFilter}
+                styles={customStyles}
                 onChange={handleKecamatanChange}
-              >
-                <option value="">Pilih Kecamatan</option>
-                {kecamatans.map(k => (
-                  <option key={k.id} value={k.id}>{k.nama_kecamatan}</option>
-                ))}
-              </select>
+                value={kecamatans.find(k => k.value === formData.kecamatan_id) || null}
+              />
             </div>
 
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Kelurahan</label>
-              <select 
-                required
-                disabled={!formData.kecamatan_id}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-3.5 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                value={formData.kelurahan_id}
-                onChange={e => setFormData(prev => ({ ...prev, kelurahan_id: e.target.value }))}
-              >
-                <option value="">Pilih Kelurahan</option>
-                {kelurahans.map(k => (
-                  <option key={k.id} value={k.id}>{k.nama_kelurahan}</option>
-                ))}
-              </select>
+              <Select 
+                options={kelurahans}
+                placeholder="Cari Kelurahan..."
+                isDisabled={!formData.kecamatan_id}
+                isClearable
+                isSearchable
+                filterOption={customFilter}
+                styles={customStyles}
+                onChange={handleKelurahanChange}
+                value={kelurahans.find(k => k.value === formData.kelurahan_id) || null}
+              />
             </div>
           </div>
 
