@@ -1,15 +1,21 @@
 import { supabase } from '../lib/supabase';
 
-// Mock user ID (since we don't have full Auth implemented yet in this MVP)
-const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000'; 
+// Get current user ID helper
+async function getCurrentUserId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Anda belum login.');
+  return user.id;
+}
 
 export async function createLaporan(data) {
   try {
+    const userId = await getCurrentUserId();
+    
     const { data: result, error } = await supabase
       .from('laporan')
       .insert([
         {
-          pelapor_id: MOCK_USER_ID, 
+          pelapor_id: userId, 
           kecamatan_id: data.kecamatan_id,
           kelurahan_id: data.kelurahan_id,
           deskripsi: data.deskripsi,
@@ -28,7 +34,7 @@ export async function createLaporan(data) {
         {
           laporan_id: result[0].id,
           status: 'pending',
-          changed_by: MOCK_USER_ID
+          changed_by: userId
         }
       ]);
     }
@@ -42,6 +48,8 @@ export async function createLaporan(data) {
 
 export async function getLaporanByUser() {
   try {
+    const userId = await getCurrentUserId();
+    
     const { data, error } = await supabase
       .from('laporan')
       .select(`
@@ -49,7 +57,7 @@ export async function getLaporanByUser() {
         kecamatan ( id, nama_kecamatan ),
         kelurahan ( id, nama_kelurahan )
       `)
-      .eq('pelapor_id', MOCK_USER_ID)
+      .eq('pelapor_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -101,11 +109,13 @@ export async function getLaporanById(id) {
 
 export async function deleteLaporan(id) {
   try {
+    const userId = await getCurrentUserId();
+    
     const { error } = await supabase
       .from('laporan')
       .delete()
       .eq('id', id)
-      .eq('pelapor_id', MOCK_USER_ID)
+      .eq('pelapor_id', userId)
       .eq('status', 'pending');
 
     if (error) throw error;
@@ -146,9 +156,11 @@ export async function getKelurahan(kecamatanId) {
 export async function uploadFoto(file) {
   if (!file) return null;
   try {
+    const userId = await getCurrentUserId();
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${MOCK_USER_ID}/${fileName}`;
+    const filePath = `${userId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('laporan-photos')
