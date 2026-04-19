@@ -70,7 +70,7 @@ export default function LaporanForm() {
     setLoading(false);
     
     if (success) {
-      navigate('/laporan');
+      navigate('/laporan?tab=history');
     } else {
       alert('Gagal membuat laporan: ' + error);
     }
