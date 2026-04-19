@@ -13,7 +13,6 @@ router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => 
     .select(`*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), profiles:pelapor_id(id, nama)`)
     .eq('kecamatan_id', req.params.kecamatanId);
 
-  // Fitur Pencarian (Search by deskripsi or alamat)
   if (search) {
     query = query.or(`deskripsi.ilike.%${search}%,alamat.ilike.%${search}%`);
   }
@@ -22,13 +21,18 @@ router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => 
 
   if (error) return res.status(500).json({ success: false, error: error.message, data: [] });
 
-  // Sorting Manual untuk Prioritas: High > Normal > Low
-  const priorityOrder = { high: 3, normal: 2, low: 1 };
-  const sortedData = data.sort((a, b) => {
-    const pA = priorityOrder[a.prioritas || 'normal'];
-    const pB = priorityOrder[b.prioritas || 'normal'];
-    if (pA !== pB) return pB - pA; // Prioritas lebih tinggi di atas
-    return new Date(b.created_at) - new Date(a.created_at); // Jika sama, yang terbaru di atas
+  // LOGIKA SORTING PRIORITAS (High > Normal > Low)
+  const priorityWeight = { high: 3, normal: 2, low: 1 };
+  
+  const sortedData = [...data].sort((a, b) => {
+    const weightA = priorityWeight[a.prioritas?.toLowerCase()] || 2;
+    const weightB = priorityWeight[b.prioritas?.toLowerCase()] || 2;
+    
+    if (weightB !== weightA) {
+      return weightB - weightA; // Prioritas lebih tinggi di atas
+    }
+    // Jika prioritas sama, yang terbaru di atas
+    return new Date(b.created_at) - new Date(a.created_at);
   });
 
   res.json({ success: true, data: sortedData });
@@ -36,8 +40,7 @@ router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => 
 
 // PUT /api/admin/laporan/:id/prioritas
 router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
-  const { prioritas } = req.body; // 'high', 'normal', 'low'
-
+  const { prioritas } = req.body;
   const { error } = await supabaseAdmin
     .from('laporan')
     .update({ prioritas })
@@ -49,7 +52,7 @@ router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
 
 // PUT /api/admin/laporan/:id/status
 router.put('/laporan/:id/status', authenticate, async (req, res) => {
-  const { status, keterangan, url_foto } = req.body;
+  const { status, keterangan } = req.body;
   const userId = req.user.id;
 
   const updateData = {
@@ -58,7 +61,7 @@ router.put('/laporan/:id/status', authenticate, async (req, res) => {
     updated_at: new Date().toISOString(),
   };
 
-  if (status === 'selesai' || status === 'done' || status === 'selesai') {
+  if (status === 'selesai' || status === 'done') {
     updateData.selesai_at = new Date().toISOString();
   }
 
