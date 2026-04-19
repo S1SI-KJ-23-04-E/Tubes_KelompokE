@@ -178,3 +178,101 @@ export async function uploadFoto(file) {
     return null;
   }
 }
+
+// --- ADMIN FUNCTIONS ---
+
+export async function getLaporanByKecamatan(kecamatanId) {
+  try {
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan ),
+        profiles ( id, nama )
+      `)
+      .eq('kecamatan_id', kecamatanId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error getting laporan by kecamatan:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+export async function getAllLaporan() {
+  try {
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan ),
+        profiles ( id, nama )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error getting all laporan:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+export async function updateLaporanStatus(id, newStatus, fileBukti = null, keterangan = '') {
+  try {
+    const userId = await getCurrentUserId();
+    
+    // 1. Update status in laporan table
+    const { error: updateError } = await supabase
+      .from('laporan')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+
+    // 2. Insert into history_laporan
+    await supabase.from('history_laporan').insert([
+      {
+        laporan_id: id,
+        status: newStatus,
+        changed_by: userId,
+        catatan: keterangan
+      }
+    ]);
+
+    // 3. Handle bukti selesai if status is 'selesai' and a file is provided
+    if (newStatus === 'selesai' && fileBukti) {
+      const fileExt = fileBukti.name.split('.').pop();
+      const fileName = `bukti_${id}_${Math.random()}.${fileExt}`;
+      const filePath = `bukti/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('laporan-photos')
+        .upload(filePath, fileBukti);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('laporan-photos')
+        .getPublicUrl(filePath);
+
+      await supabase.from('bukti_selesai').insert([
+        {
+          laporan_id: id,
+          url_foto: publicUrlData.publicUrl,
+          keterangan: keterangan,
+          uploaded_by: userId
+        }
+      ]);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating status:', error);
+    return { success: false, error: error.message };
+  }
+}
