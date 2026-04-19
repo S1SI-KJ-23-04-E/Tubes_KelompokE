@@ -143,77 +143,7 @@ export default function LaporanDetail() {
         </div>
       </div>
 
-      {/* --- ADMIN ACTION PANEL --- */}
-      {isAdmin && data.status !== 'selesai' && data.status !== 'done' && (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-8 md:p-10 mb-8 shadow-sm">
-          <h3 className="text-2xl font-extrabold text-indigo-900 mb-6 flex items-center">
-            <AlertCircle size={28} className="mr-3 text-indigo-600" /> Aksi Admin & Petugas
-          </h3>
-          <form onSubmit={handleUpdateStatus} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold text-indigo-900 mb-2">Ubah Status</label>
-                <select 
-                  className="w-full bg-white border border-indigo-200 text-slate-900 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="diproses">Diproses</option>
-                  <option value="selesai">Selesai</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-indigo-900 mb-2">Catatan Tindakan (Opsional)</label>
-                <input 
-                  type="text" 
-                  placeholder="Misal: Tim sudah diterjunkan..."
-                  className="w-full bg-white border border-indigo-200 text-slate-900 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={catatan}
-                  onChange={(e) => setCatatan(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {newStatus === 'selesai' && (
-              <div className="mt-4 p-6 bg-white rounded-2xl border border-green-200">
-                <label className="block text-sm font-bold text-green-800 mb-2">Unggah Foto Bukti Pekerjaan Selesai (Wajib)</label>
-                <div className="flex items-start justify-start w-full mt-2">
-                  <label className="flex flex-col items-center justify-center w-full sm:w-72 h-44 border-2 border-green-200 border-dashed rounded-xl cursor-pointer bg-green-50 hover:bg-green-100 transition-all overflow-hidden relative group">
-                      {buktiPreview ? (
-                        <>
-                          <img src={buktiPreview} alt="Preview Bukti" className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="bg-slate-900/80 text-white px-4 py-2 rounded text-sm flex items-center gap-2">
-                              <Upload size={14} /> Ganti
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                            <Upload size={28} className="text-green-500 mb-2" />
-                            <p className="mb-1 text-sm text-green-700 font-bold">Pilih foto bukti perbaikan</p>
-                            <p className="text-xs text-green-600">Format: JPG, PNG (Max 5MB)</p>
-                        </div>
-                      )}
-                      <input type="file" className="hidden" accept="image/*" onChange={handleBuktiChange} />
-                  </label>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-2">
-              <button 
-                type="submit" 
-                disabled={actionLoading || newStatus === data.status && newStatus !== 'selesai'}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {actionLoading ? 'Menyimpan...' : 'Perbarui Status Laporan'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* --- ADMIN ACTION PANEL REMOVED: Status updates are now handled in the dashboard --- */}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
         <h3 className="text-2xl font-extrabold text-slate-900 mb-8">Riwayat Penanganan</h3>
