@@ -9,7 +9,7 @@ const statusColors = {
   rejected: 'bg-red-100 text-red-800'
 };
 
-export default function LaporanCard({ laporan, onDelete }) {
+export default function LaporanCard({ laporan, onDelete, minimal = false }) {
   const {
     id,
     deskripsi,
@@ -28,15 +28,17 @@ export default function LaporanCard({ laporan, onDelete }) {
   });
 
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all relative group">
-      <div className="flex justify-between items-start mb-3">
-        <span className={`text-xs font-bold px-3 py-1 rounded-full ${statusColors[status] || 'bg-gray-100'}`}>
-          {status.replace('_', ' ').toUpperCase()}
-        </span>
-        <span className="text-xs text-gray-400">{date}</span>
-      </div>
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all relative group h-full flex flex-col">
+      {!minimal && (
+        <div className="flex justify-between items-start mb-3">
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${statusColors[status] || 'bg-gray-100'}`}>
+            {status.replace('_', ' ').toUpperCase()}
+          </span>
+          <span className="text-xs text-gray-400">{date}</span>
+        </div>
+      )}
       
-      <h3 className="font-semibold text-gray-800 line-clamp-2 mb-2 text-sm">
+      <h3 className={`font-semibold text-gray-800 line-clamp-2 mb-2 ${minimal ? 'text-base' : 'text-sm'}`}>
         {deskripsi}
       </h3>
       
@@ -46,9 +48,14 @@ export default function LaporanCard({ laporan, onDelete }) {
       </p>
 
       <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50">
-        <div className="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
-          👍 {upvote_count || 0} Upvotes
-        </div>
+        {!minimal ? (
+          <div className="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+            👍 {upvote_count || 0} Upvotes
+          </div>
+        ) : (
+          <span className="text-[10px] text-gray-400 italic">Dibuat pada {date}</span>
+        )}
+        
         <div className="flex space-x-2">
           {status === 'pending' && onDelete && (
             <button 
