@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
@@ -23,9 +23,8 @@ const STATUS_CONFIG = {
 };
 
 const PRIORITY_CONFIG = {
-  high:   { label: 'Tinggi',  color: 'text-red-600 bg-red-50 border-red-200' },
-  low:    { label: 'Rendah',  color: 'text-blue-500 bg-blue-50 border-blue-200' },
-  normal: { label: 'Normal',  color: 'text-slate-500 bg-slate-50 border-slate-200' },
+  high: { label: 'Tinggi', color: 'text-red-600 bg-red-50 border-red-200' },
+  low:  { label: 'Rendah', color: 'text-blue-500 bg-blue-50 border-blue-200' },
 };
 
 export default function LaporanList() {
@@ -45,20 +44,16 @@ export default function LaporanList() {
     if (profile && isAdmin && activeTab === 'daftar') setActiveTab('masuk');
   }, [profile, isAdmin]);
 
-  // Efek untuk Pencarian Real-time
   useEffect(() => {
     if (authLoading) return;
     const delayDebounceFn = setTimeout(() => {
       loadData();
-    }, 300); // Tunggu 300ms setelah user berhenti mengetik
-
+    }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, profile, authLoading, activeTab]);
 
   const loadData = async () => {
-    // Kami hanya set loading jika data kosong (supaya tidak kedip-kedip saat ngetik)
     if (laporanMasuk.length === 0) setLoading(true);
-    
     try {
       if (isAdmin && profile?.kecamatan_id) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -68,13 +63,9 @@ export default function LaporanList() {
         const json = await res.json();
         if (json.success) setLaporanMasuk(json.data || []);
       } 
-      
-      // Feed & History hanya di-load sekali atau jika tab berubah
-      if (activeTab === 'daftar') {
-        const feedRes = await getAllLaporan();
-        if (feedRes.success) setLaporanPublik(feedRes.data?.filter(i => i.pelapor_id !== user?.id) || []);
-      }
-      if (activeTab === 'history' && user) {
+      const feedRes = await getAllLaporan();
+      if (feedRes.success) setLaporanPublik(feedRes.data?.filter(i => i.pelapor_id !== user?.id) || []);
+      if (user) {
         const myRes = await getLaporanByUser();
         if (myRes.success) setLaporanSaya(myRes.data || []);
       }
@@ -107,7 +98,7 @@ export default function LaporanList() {
     if (success) loadData();
   };
 
-  if (authLoading) return <div className="p-20 text-center text-slate-400 font-bold">Memuat Dashboard...</div>;
+  if (authLoading) return <div className="p-20 text-center text-slate-400 font-bold">Memuat...</div>;
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -125,9 +116,7 @@ export default function LaporanList() {
       <main className="flex-1 min-w-0 p-6 md:p-10">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
           <div className="flex-1">
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {isAdmin ? (activeTab === 'masuk' ? 'Laporan Masuk' : 'Daftar Laporan') : (activeTab === 'daftar' ? 'Laporan Publik' : 'History Saya')}
-            </h1>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{isAdmin ? (activeTab === 'masuk' ? 'Laporan Masuk' : 'Daftar Laporan') : 'Laporan Publik'}</h1>
             <p className="text-slate-500 text-sm mt-1 font-medium">{isAdmin ? `Kecamatan ${profile?.kecamatan?.nama_kecamatan || ''}` : 'Pantau infrastruktur kota Anda'}</p>
           </div>
 
@@ -135,13 +124,7 @@ export default function LaporanList() {
             {isAdmin && (
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Ketik deskripsi atau alamat..." 
-                  className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-80 focus:ring-2 focus:ring-indigo-500/20 outline-none shadow-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <input type="text" placeholder="Ketik deskripsi atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-80 focus:ring-2 focus:ring-indigo-500/20 outline-none shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             )}
             {!isAdmin && activeTab === 'daftar' && <Link to="/laporan/baru" className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">+ Laporan</Link>}
@@ -152,11 +135,7 @@ export default function LaporanList() {
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
           isAdmin ? (
-            <AdminView 
-              laporan={activeTab === 'masuk' ? (laporanMasuk || []).filter(l => l.status !== 'selesai' && l.status !== 'rejected') : (laporanMasuk || [])} 
-              onStatus={handleUpdateStatus} 
-              onPriority={handleUpdatePriority} 
-            />
+            <AdminView laporan={activeTab === 'masuk' ? (laporanMasuk || []).filter(l => l.status !== 'selesai' && l.status !== 'rejected') : (laporanMasuk || [])} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} />
           ) : (
             activeTab === 'daftar' ? <DaftarWargaView laporan={laporanPublik} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
           )
@@ -167,23 +146,21 @@ export default function LaporanList() {
 }
 
 function AdminView({ laporan, onStatus, onPriority }) {
-  if (!laporan || laporan.length === 0) return (
-    <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400">
-      <Inbox size={40} className="mx-auto text-slate-300 mb-2" />
-      <p className="font-medium">Tidak menemukan laporan yang sesuai.</p>
-    </div>
-  );
+  if (!laporan || laporan.length === 0) return <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400"><Inbox size={40} className="mx-auto text-slate-300 mb-2" /><p className="font-medium">Tidak ada laporan.</p></div>;
   
   return (
     <div className="space-y-5">
       {laporan.map(item => {
-        const priorityKey = (item.prioritas || 'normal').toLowerCase();
+        // PERBAIKAN: Default ke 'low' jika kosong, dan hapus 'normal'
+        const priorityVal = (item.prioritas || 'low').toLowerCase();
+        const finalPriority = (priorityVal === 'high' || priorityVal === 'low') ? priorityVal : 'low';
+        
         const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-        const pCfg = PRIORITY_CONFIG[priorityKey] || PRIORITY_CONFIG.normal;
+        const pCfg = PRIORITY_CONFIG[finalPriority];
 
         return (
-          <div key={item.id} className={`bg-white rounded-2xl border ${priorityKey === 'high' ? 'border-red-200 shadow-red-50' : 'border-slate-200'} p-6 flex flex-col md:flex-row justify-between gap-6 shadow-sm hover:shadow-md transition-all relative`}>
-            {priorityKey === 'high' && <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500 rounded-l-2xl" />}
+          <div key={item.id} className={`bg-white rounded-2xl border ${finalPriority === 'high' ? 'border-red-200 shadow-red-50' : 'border-slate-200'} p-6 flex flex-col md:flex-row justify-between gap-6 shadow-sm hover:shadow-md transition-all relative`}>
+            {finalPriority === 'high' && <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500 rounded-l-2xl" />}
             
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -204,7 +181,7 @@ function AdminView({ laporan, onStatus, onPriority }) {
                <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><ArrowUpCircle size={12}/> Set Prioritas</p>
                   <select 
-                    value={priorityKey === 'normal' ? 'low' : priorityKey} 
+                    value={finalPriority} 
                     onChange={(e) => onPriority(item.id, e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold py-2.5 px-3 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all cursor-pointer"
                   >
@@ -215,19 +192,9 @@ function AdminView({ laporan, onStatus, onPriority }) {
 
                <div className="flex flex-col gap-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Clock size={12}/> Update Status</p>
-                  
-                  {item.status === 'pending' && (
-                    <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all">Verifikasi Laporan</button>
-                  )}
-                  
-                  {(item.status === 'verified' || item.status === 'pending') && (
-                    <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all">Mulai Perbaikan</button>
-                  )}
-                  
-                  {item.status === 'in_progress' && (
-                    <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all">Tandai Selesai</button>
-                  )}
-                  
+                  {item.status === 'pending' && <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all">Verifikasi Laporan</button>}
+                  {(item.status === 'verified' || item.status === 'pending') && <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all">Mulai Perbaikan</button>}
+                  {item.status === 'in_progress' && <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all">Tandai Selesai</button>}
                   <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all">Tolak Laporan</button>
                </div>
             </div>
@@ -251,15 +218,8 @@ function HistoryWargaView({ laporan, onDelete }) {
     <div className="space-y-4">
       {laporan.map(item => (
         <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm hover:border-indigo-100 transition-all">
-          <div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_CONFIG[item.status]?.badge}`}>{STATUS_CONFIG[item.status]?.label}</span>
-            <h4 className="font-bold text-slate-800 text-lg mt-2">{item.deskripsi}</h4>
-            <p className="text-[12px] text-slate-500 mt-1">📍 {item.alamat}</p>
-          </div>
-          <div className="flex gap-2">
-            {item.status === 'pending' && <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={20} /></button>}
-            <Link to={`/laporan/${item.id}`} className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-xl transition-colors"><ChevronRight size={24} /></Link>
-          </div>
+          <div><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_CONFIG[item.status]?.badge}`}>{STATUS_CONFIG[item.status]?.label}</span><h4 className="font-bold text-slate-800 text-lg mt-2">{item.deskripsi}</h4><p className="text-[12px] text-slate-500 mt-1">📍 {item.alamat}</p></div>
+          <div className="flex gap-2">{item.status === 'pending' && <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={20} /></button>}<Link to={`/laporan/${item.id}`} className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-xl transition-colors"><ChevronRight size={24} /></Link></div>
         </div>
       ))}
     </div>
