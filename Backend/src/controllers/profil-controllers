@@ -30,3 +30,9 @@ export const updateProfile = async (req, res) => {
     });
   }
 };
+
+if (nama.length < 3) {
+  return res.status(400).json({
+    message: "Nama minimal 3 karakter",
+  });
+}
