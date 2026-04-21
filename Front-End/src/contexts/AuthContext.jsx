@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { login as loginService, register as registerService, logout as logoutService, getCurrentUser } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -8,77 +7,122 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const profileCache = useRef(null);
 
-  // Initialize auth state
+  const fetchProfile = useCallback(async (userId) => {
+    if (!userId) return null;
+    // Return cached profile if already fetched for this user
+    if (profileCache.current && profileCache.current.id === userId) {
+      return profileCache.current;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, kecamatan(nama_kecamatan)')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.warn('Profile fetch error:', error.message);
+        return null;
+      }
+      profileCache.current = data;
+      return data;
+    } catch (err) {
+      console.warn('Profile fetch exception:', err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchSession = async () => {
-      const { user: currentUser, profile: currentProfile } = await getCurrentUser();
-      setUser(currentUser);
-      setProfile(currentProfile);
-      setLoading(false);
+    let active = true;
+
+    // Initialize from LOCAL cached session — no network call
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!active) return;
+        if (session?.user) {
+          setUser(session.user);
+          const prof = await fetchProfile(session.user.id);
+          if (active) setProfile(prof);
+        }
+      } catch (err) {
+        console.warn('Session init error:', err);
+      }
+      if (active) setLoading(false);
     };
 
-    fetchSession();
+    init();
 
-    // Listen for auth changes (e.g. login from another tab, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        // If login event, fetch profile again
-        if (event === 'SIGNED_IN') {
-          const { profile: updatedProfile } = await getCurrentUser();
-          setProfile(updatedProfile);
-        }
-      } else {
+    // Auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+
+      console.log('[Auth]', event);
+
+      if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
+        profileCache.current = null;
+        return;
       }
-      setLoading(false);
+
+      // For TOKEN_REFRESHED — just update the user object silently
+      // Do NOT re-fetch profile, do NOT trigger loading
+      if (session?.user) {
+        setUser(session.user);
+      }
+
+      // Only fetch profile on actual sign-in
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetchProfile(session.user.id).then((prof) => {
+          if (active) setProfile(prof);
+        });
+      }
     });
 
     return () => {
+      active = false;
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const login = async (email, password) => {
-    const result = await loginService(email, password);
-    if (result.success) {
-      setUser(result.user);
-      setProfile(result.profile);
-    }
-    return result;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+    setUser(data.user);
+    const prof = await fetchProfile(data.user.id);
+    setProfile(prof);
+    return { success: true, user: data.user, profile: prof };
   };
 
   const register = async (email, password, nama, kecamatan_id) => {
-    const result = await registerService(email, password, nama, kecamatan_id);
-    if (result.success) {
-      setUser(result.user);
-      setProfile(result.profile);
-    }
-    return result;
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+    if (authError) return { success: false, error: authError.message };
+    const authUser = authData.user;
+    if (!authUser) return { success: false, error: 'Pendaftaran gagal.' };
+
+    const profileData = { id: authUser.id, nama, role: 'warga', kecamatan_id: kecamatan_id || null };
+    const { error: profileError } = await supabase.from('profiles').insert([profileData]);
+    if (profileError) return { success: false, error: profileError.message };
+
+    setUser(authUser);
+    setProfile(profileData);
+    profileCache.current = profileData;
+    return { success: true, user: authUser, profile: profileData };
   };
 
   const logout = async () => {
-    const result = await logoutService();
-    if (result.success) {
-      setUser(null);
-      setProfile(null);
-    }
-    return result;
-  };
-
-  const value = {
-    user,
-    profile,
-    loading,
-    login,
-    register,
-    logout
+    const { error } = await supabase.auth.signOut();
+    if (error) return { success: false, error: error.message };
+    setUser(null);
+    setProfile(null);
+    profileCache.current = null;
+    return { success: true };
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, profile, loading, login, register, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

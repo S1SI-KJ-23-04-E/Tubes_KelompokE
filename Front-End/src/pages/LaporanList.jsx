@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
@@ -40,17 +40,27 @@ export default function LaporanList() {
   const isAdmin = profile?.role === 'kecamatan' || profile?.role === 'petugas' || profile?.role === 'super_admin';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || (isAdmin ? 'masuk' : 'daftar'));
 
+  const initialLoadDoneRef = React.useRef(false);
+
   useEffect(() => {
     if (profile && isAdmin && activeTab === 'daftar') setActiveTab('masuk');
   }, [profile, isAdmin]);
 
+  // Initial data load — only once when auth is ready
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || initialLoadDoneRef.current) return;
+    initialLoadDoneRef.current = true;
+    loadData();
+  }, [authLoading]);
+
+  // Re-fetch when search query changes (debounced) or tab changes
+  useEffect(() => {
+    if (authLoading || !initialLoadDoneRef.current) return;
     const delayDebounceFn = setTimeout(() => {
       loadData();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, profile, authLoading, activeTab]);
+  }, [searchQuery, activeTab]);
 
   const loadData = async () => {
     if (laporanMasuk.length === 0) setLoading(true);
