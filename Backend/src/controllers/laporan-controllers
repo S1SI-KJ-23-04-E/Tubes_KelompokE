@@ -25,3 +25,31 @@ export const selesaiLaporan = async (req, res) => {
     });
   }
 };
+
+export const tolakLaporan = async (req, res) => {
+  const { id } = req.params;
+  const { alasan } = req.body;
+
+  try {
+    const { data, error } = await supabase
+      .from("laporan")
+      .update({
+        status: "rejected",
+        catatan: alasan,
+      })
+      .eq("id_laporan", id)
+      .select();
+
+    if (error) throw error;
+
+    return res.json({
+      message: "Laporan berhasil ditolak",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal menolak laporan",
+      error: err.message,
+    });
+  }
+};
