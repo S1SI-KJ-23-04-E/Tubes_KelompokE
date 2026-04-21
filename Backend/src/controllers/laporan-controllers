@@ -1,0 +1,27 @@
+import { supabase } from "../lib/supabaseClient.js";
+
+export const selesaiLaporan = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from("laporan")
+      .update({
+        status: "completed",
+      })
+      .eq("id_laporan", id)
+      .select();
+
+    if (error) throw error;
+
+    return res.json({
+      message: "Laporan berhasil diselesaikan",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal menyelesaikan laporan",
+      error: err.message,
+    });
+  }
+};
