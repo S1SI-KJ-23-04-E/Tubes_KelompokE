@@ -1,0 +1,32 @@
+import { supabase } from "../lib/supabaseClient.js";
+
+export const updateProfile = async (req, res) => {
+  try {
+    const user = req.user;
+    const { nama } = req.body;
+
+    if (!nama) {
+      return res.status(400).json({
+        message: "Nama wajib diisi",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ nama })
+      .eq("id", user.id)
+      .select();
+
+    if (error) throw error;
+
+    return res.json({
+      message: "Profil berhasil diperbarui",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal update profil",
+      error: err.message,
+    });
+  }
+};
