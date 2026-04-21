@@ -5,12 +5,21 @@ export const updateProfile = async (req, res) => {
     const user = req.user;
     const { nama } = req.body;
 
+    // ✅ VALIDASI 1: kosong
     if (!nama) {
       return res.status(400).json({
         message: "Nama wajib diisi",
       });
     }
 
+    // ✅ VALIDASI 2: panjang minimal (INI DARI COMMIT 4)
+    if (nama.length < 3) {
+      return res.status(400).json({
+        message: "Nama minimal 3 karakter",
+      });
+    }
+
+    // ✅ QUERY DB
     const { data, error } = await supabase
       .from("profiles")
       .update({ nama })
@@ -23,6 +32,7 @@ export const updateProfile = async (req, res) => {
       message: "Profil berhasil diperbarui",
       data,
     });
+
   } catch (err) {
     return res.status(500).json({
       message: "Gagal update profil",
@@ -30,9 +40,3 @@ export const updateProfile = async (req, res) => {
     });
   }
 };
-
-if (nama.length < 3) {
-  return res.status(400).json({
-    message: "Nama minimal 3 karakter",
-  });
-}
