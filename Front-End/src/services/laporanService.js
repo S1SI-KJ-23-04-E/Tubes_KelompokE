@@ -292,3 +292,11 @@ export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
 export async function tolakLaporan(id, alasan = '') {
   return await updateLaporanStatus(id, 'ditolak', null, alasan);
 }
+
+export async function tolakLaporan(id, alasan = '') {
+  if (!alasan) {
+    return { success: false, error: 'Alasan wajib diisi' };
+  }
+  return await updateLaporanStatus(id, 'ditolak', null, alasan);
+}
+
