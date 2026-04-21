@@ -1,0 +1,30 @@
+import axios from "axios";
+
+const API_URL = "http://localhost:3000/profile";
+
+const getAuthHeader = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+};
+
+// update profile
+export const updateProfile = async (nama) => {
+  try {
+    const res = await axios.put(
+      API_URL,
+      { nama },
+      getAuthHeader()
+    );
+
+    return { success: true, data: res.data };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.message || "Gagal update profile",
+    };
+  }
+};
