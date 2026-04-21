@@ -1,0 +1,13 @@
+export const roleMiddleware = (allowedRole) => {
+  return (req, res, next) => {
+    const user = req.user;
+
+    if (!user || user.role !== allowedRole) {
+      return res.status(403).json({
+        message: "Akses ditolak: role tidak sesuai",
+      });
+    }
+
+    next();
+  };
+};
