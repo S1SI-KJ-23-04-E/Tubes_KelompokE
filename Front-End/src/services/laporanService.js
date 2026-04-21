@@ -1,10 +1,10 @@
 import { supabase } from '../lib/supabase';
 
-// Get current user ID helper
+// Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Anda belum login.');
-  return user.id;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Anda belum login.');
+  return session.user.id;
 }
 
 export async function createLaporan(data) {
@@ -30,13 +30,14 @@ export async function createLaporan(data) {
     
     // Also insert to history_laporan
     if (result && result.length > 0) {
-      await supabase.from('history_laporan').insert([
+      const { error: hErr } = await supabase.from('history_laporan').insert([
         {
           laporan_id: result[0].id,
           status: 'pending',
           changed_by: userId
         }
       ]);
+      if (hErr) console.warn('History insert warning:', hErr.message);
     }
 
     return { success: true, data: result };
@@ -61,7 +62,7 @@ export async function getLaporanByUser() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true, data };
+    return { success: true, data: data || [] };
   } catch (error) {
     console.error('Error getting laporan:', error);
     return { success: false, error: error.message, data: [] };
@@ -83,23 +84,29 @@ export async function getLaporanById(id) {
 
     if (error) throw error;
 
-    // Get history
-    const { data: history } = await supabase
+    // Fetch history — graceful, won't block on failure
+    let history = [];
+    const { data: hData, error: hError } = await supabase
       .from('history_laporan')
       .select('*')
       .eq('laporan_id', id)
       .order('created_at', { ascending: true });
+    if (!hError) history = hData || [];
+    else console.warn('history_laporan fetch warning:', hError.message);
 
-    // Get bukti_selesai
-    const { data: bukti } = await supabase
+    // Fetch bukti_selesai — graceful
+    let bukti = null;
+    const { data: bData, error: bError } = await supabase
       .from('bukti_selesai')
       .select('*')
       .eq('laporan_id', id)
       .maybeSingle();
+    if (!bError) bukti = bData || null;
+    else console.warn('bukti_selesai fetch warning:', bError.message);
 
-    return { 
-      success: true, 
-      data: { ...data, history: history || [], bukti: bukti || null } 
+    return {
+      success: true,
+      data: { ...data, history, bukti }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
@@ -195,7 +202,7 @@ export async function getLaporanByKecamatan(kecamatanId) {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true, data };
+    return { success: true, data: data || [] };
   } catch (error) {
     console.error('Error getting laporan by kecamatan:', error);
     return { success: false, error: error.message, data: [] };
@@ -215,7 +222,7 @@ export async function getAllLaporan() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true, data };
+    return { success: true, data: data || [] };
   } catch (error) {
     console.error('Error getting all laporan:', error);
     return { success: false, error: error.message, data: [] };
@@ -235,7 +242,7 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     if (updateError) throw updateError;
 
     // 2. Insert into history_laporan
-    await supabase.from('history_laporan').insert([
+    const { error: historyErr } = await supabase.from('history_laporan').insert([
       {
         laporan_id: id,
         status: newStatus,
@@ -243,6 +250,7 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
         catatan: keterangan
       }
     ]);
+    if (historyErr) console.warn('History insert warning:', historyErr.message);
 
     // 3. Handle bukti selesai if status is 'selesai' and a file is provided
     if (newStatus === 'selesai' && fileBukti) {
