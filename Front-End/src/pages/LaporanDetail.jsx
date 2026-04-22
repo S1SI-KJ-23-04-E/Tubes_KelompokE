@@ -86,56 +86,64 @@ export default function LaporanDetail() {
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
-      <button onClick={() => navigate(-1)} className="flex items-center text-slate-500 hover:text-indigo-600 font-bold mb-8 transition-colors">
-        <ArrowLeft size={20} className="mr-2" />
-        Kembali ke Daftar
-      </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-50 p-4 md:p-8">
+      <div className="max-w-4xl mx-auto">
+        <button onClick={() => navigate(-1)} className="flex items-center text-[#1e3a8a] hover:text-blue-700 font-bold mb-8 transition-all duration-300 group text-sm md:text-base">
+          <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
+          Kembali ke Daftar
+        </button>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-        <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start gap-4">
-          <div>
-            <span className={`text-xs font-black px-4 py-1.5 rounded-full inline-block mb-4 tracking-wider ${statusColors[data.status] || 'bg-gray-100'}`}>
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden mb-8">
+        <div className="p-8 md:p-10 border-b-2 border-blue-200 flex flex-col md:flex-row justify-between items-start gap-6">
+          <div className="flex-1">
+            <span className={`text-xs font-black px-4 py-2 rounded-full inline-block mb-4 tracking-wider shadow-sm ${statusColors[data.status] || 'bg-gray-100'}`}>
               {data.status.replace('_', ' ').toUpperCase()}
             </span>
-            <h1 className="text-3xl font-extrabold text-slate-900 mb-3 leading-tight">Detail Laporan</h1>
-            <p className="text-slate-500 flex items-center font-medium mb-1">
-              <Clock size={18} className="mr-2" />
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#1e3a8a] to-blue-600 bg-clip-text text-transparent mb-4 leading-tight">Detail Laporan</h1>
+            <p className="text-slate-600 flex items-center font-medium mb-3 text-base">
+              <Clock size={20} className="mr-2 text-[#1e3a8a]" />
               Dilaporkan: {new Date(data.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
             </p>
             {isAdmin && data.profiles && (
-              <p className="text-slate-500 flex items-center font-medium mt-2 bg-indigo-50 px-3 py-1 rounded-lg w-max text-indigo-700">
-                Pelapor: {data.profiles.nama}
+              <p className="text-[#1e3a8a] flex items-center font-bold mt-3 bg-blue-50 px-4 py-2.5 rounded-lg w-max border border-blue-200">
+                👤 Pelapor: {data.profiles.nama}
               </p>
             )}
           </div>
-          <div className="bg-slate-50 px-6 py-4 rounded-2xl text-center border border-slate-200 shadow-sm min-w-[120px]">
-            <span className="block text-3xl mb-2 drop-shadow-sm">👍</span>
-            <span className="font-extrabold text-slate-800 text-xl">{data.upvote_count || 0}</span>
-            <span className="block text-xs text-slate-500 font-bold uppercase mt-1">Upvotes</span>
+          <div className="bg-gradient-to-br from-blue-50 to-slate-50 px-6 py-6 rounded-xl text-center border-2 border-blue-200 shadow-lg min-w-[140px]">
+            <span className="block text-4xl mb-3">👍</span>
+            <span className="font-bold text-[#1e3a8a] text-3xl">{data.upvote_count || 0}</span>
+            <span className="block text-xs text-slate-600 font-bold uppercase mt-2 tracking-wide">Upvotes</span>
           </div>
         </div>
 
         <div className="p-8 md:p-10">
-          <h3 className="font-bold text-slate-900 mb-4 text-xl">Deskripsi Kejadian</h3>
-          <p className="text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-8 whitespace-pre-wrap leading-relaxed text-lg">
+          <h3 className="font-bold text-slate-900 mb-4 text-2xl flex items-center">
+            <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
+            Deskripsi Kejadian
+          </h3>
+          <p className="text-slate-700 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-xl border-2 border-slate-200 mb-8 whitespace-pre-wrap leading-relaxed text-base font-medium">
             {data.deskripsi}
           </p>
 
-          <h3 className="font-bold text-slate-900 mb-4 text-xl flex items-center">
-            <MapPin size={24} className="mr-2 text-indigo-500" /> Lokasi Laporan
+          <h3 className="font-bold text-slate-900 mb-4 text-2xl flex items-center">
+            <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
+            <MapPin size={24} className="mr-2 text-[#1e3a8a]" /> Lokasi Laporan
           </h3>
-          <div className="text-slate-700 mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-            <p className="text-lg font-medium mb-1">{data.alamat}</p>
-            <span className="text-slate-500">
-              Kelurahan {data.kelurahan?.nama_kelurahan}, Kecamatan {data.kecamatan?.nama_kecamatan}
+          <div className="text-slate-700 mb-8 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-xl border-2 border-slate-200">
+            <p className="text-lg font-bold text-slate-800 mb-2">{data.alamat}</p>
+            <span className="text-slate-600 font-medium">
+              📍 Kelurahan {data.kelurahan?.nama_kelurahan}, Kecamatan {data.kecamatan?.nama_kecamatan}
             </span>
           </div>
 
           {data.foto_url && (
-            <div className="mb-4">
-              <h3 className="font-bold text-slate-900 mb-4 text-xl">Bukti Foto Kerusakan</h3>
-              <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-sm">
+            <div className="mb-8">
+              <h3 className="font-bold text-slate-900 mb-4 text-2xl flex items-center">
+                <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
+                Bukti Foto Kerusakan
+              </h3>
+              <div className="rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg">
                 <img src={data.foto_url} alt="Foto laporan" className="w-full max-h-[500px] object-cover hover:scale-105 transition-transform duration-500" />
               </div>
             </div>
@@ -145,22 +153,25 @@ export default function LaporanDetail() {
 
       {/* --- ADMIN ACTION PANEL REMOVED: Status updates are now handled in the dashboard --- */}
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
-        <h3 className="text-2xl font-extrabold text-slate-900 mb-8">Riwayat Penanganan</h3>
-        <div className="space-y-8">
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10 mb-8">
+        <h3 className="text-3xl font-bold bg-gradient-to-r from-[#1e3a8a] to-blue-600 bg-clip-text text-transparent mb-8 flex items-center">
+          <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
+          Riwayat Penanganan
+        </h3>
+        <div className="space-y-6">
           {data.history?.map((h, i) => (
             <div key={h.id} className="flex relative">
               {i !== data.history.length - 1 && (
-                <div className="absolute top-10 left-5 bottom-[-2rem] w-0.5 bg-indigo-100 -ml-[1px] z-0"></div>
+                <div className="absolute top-12 left-6 bottom-[-1.8rem] w-1 bg-blue-200 -ml-[2px] z-0"></div>
               )}
-              <div className="relative z-10 w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 border-4 border-white shadow-sm">
-                <CheckCircle2 size={20} />
+              <div className="relative z-10 w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-[#1e3a8a] text-white flex items-center justify-center shrink-0 border-4 border-white shadow-lg">
+                <CheckCircle2 size={24} />
               </div>
-              <div className="ml-5 pb-2">
+              <div className="ml-6 pb-2 flex-1">
                 <p className="font-bold text-slate-800 text-lg">{h.status.replace('_', ' ').toUpperCase()}</p>
-                <p className="text-sm font-medium text-slate-400 mt-1">{new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                <p className="text-sm font-medium text-slate-500 mt-1.5">🕐 {new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</p>
                 {h.catatan && (
-                  <p className="text-md mt-3 text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <p className="text-base mt-3.5 text-slate-700 bg-gradient-to-br from-slate-50 to-blue-50 p-4 rounded-lg border-2 border-slate-200 italic font-medium">
                     "{h.catatan}"
                   </p>
                 )}
@@ -168,18 +179,18 @@ export default function LaporanDetail() {
             </div>
           ))}
           {(!data.history || data.history.length === 0) && (
-            <p className="text-slate-500 italic">Belum ada riwayat penanganan.</p>
+            <p className="text-slate-500 italic text-center py-8">Belum ada riwayat penanganan.</p>
           )}
         </div>
       </div>
 
       {(data.status === 'selesai' || data.status === 'done') && data.bukti && (
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl shadow-sm border border-green-100 p-8 md:p-10 mb-8">
-          <h3 className="text-2xl font-extrabold text-green-800 mb-4 flex items-center">
-            <CheckCircle2 size={28} className="mr-3" /> Laporan Telah Diselesaikan
+        <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl shadow-xl border-2 border-green-200 p-8 md:p-10 mb-8">
+          <h3 className="text-3xl font-bold text-green-800 mb-5 flex items-center">
+            <CheckCircle2 size={32} className="mr-3 text-green-600" /> Laporan Telah Diselesaikan ✓
           </h3>
-          <p className="text-green-700 text-lg mb-6">{data.bukti.keterangan || 'Infrastruktur telah selesai diperbaiki.'}</p>
-          <div className="rounded-3xl overflow-hidden shadow-sm border border-green-200">
+          <p className="text-green-800 text-lg mb-7 font-medium leading-relaxed">{data.bukti.keterangan || 'Infrastruktur telah selesai diperbaiki.'}</p>
+          <div className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200">
             <img src={data.bukti.url_foto} alt="Bukti penyelesaian" className="w-full max-h-[400px] object-cover" />
           </div>
         </div>
@@ -188,6 +199,7 @@ export default function LaporanDetail() {
       {(data.status === 'selesai' || data.status === 'done') && (
         <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
       )}
+      </div>
     </div>
   );
 }

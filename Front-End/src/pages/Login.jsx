@@ -32,39 +32,45 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-          Masuk ke SIMIKOT
-        </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Atau{' '}
-          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
-            Daftar akun warga baru
+        <div className="text-center mb-8">
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#1e3a8a] to-blue-600 bg-clip-text text-transparent mb-3">
+            SIMIKOT
+          </h2>
+          <p className="text-slate-600 text-base font-medium">Sistem Informasi Manajemen Infrastruktur Kerusakan Jalan</p>
+        </div>
+        <p className="mt-6 text-center text-sm text-slate-600">
+          Belum punya akun?{' '}
+          <Link to="/register" className="font-bold text-[#1e3a8a] hover:text-blue-700 transition-colors duration-300">
+            Daftar di sini
           </Link>
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-slate-100">
+      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-10 px-6 shadow-xl rounded-2xl border border-slate-100 backdrop-blur-sm bg-opacity-95">
           
           {errorMsg && (
-            <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-              <p className="text-sm text-red-700">{errorMsg}</p>
+            <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+              <p className="text-sm font-semibold text-red-700">{errorMsg}</p>
             </div>
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Email address</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <label className="block text-sm font-bold text-slate-800 mb-2.5 flex items-center">
+                <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-2"></span>
+                Email
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
                   type="email"
                   required
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-slate-300 rounded-xl p-3 bg-slate-50 border outline-none"
+                  className="focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a] block w-full pl-11 sm:text-sm border-2 border-slate-200 rounded-lg p-3 bg-gradient-to-br from-slate-50 to-blue-50 outline-none transition-all duration-300 placeholder-slate-500 font-medium"
                   placeholder="anda@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -73,15 +79,18 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Password</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <label className="block text-sm font-bold text-slate-800 mb-2.5 flex items-center">
+                <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-2"></span>
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
                   type="password"
                   required
-                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-slate-300 rounded-xl p-3 bg-slate-50 border outline-none"
+                  className="focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a] block w-full pl-11 sm:text-sm border-2 border-slate-200 rounded-lg p-3 bg-gradient-to-br from-slate-50 to-blue-50 outline-none transition-all duration-300 placeholder-slate-500 font-medium"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -89,13 +98,18 @@ export default function Login() {
               </div>
             </div>
 
-            <div>
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg bg-gradient-to-r from-[#1e3a8a] to-blue-600 hover:from-[#172554] hover:to-blue-700 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e3a8a] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 active:scale-95"
               >
-                {loading ? 'Memproses...' : (
+                {loading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                    Memproses...
+                  </>
+                ) : (
                   <>
                     <LogIn className="h-5 w-5 mr-2" />
                     Masuk
