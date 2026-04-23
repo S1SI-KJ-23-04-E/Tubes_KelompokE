@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ThumbsUp } from 'lucide-react';
+import { upvoteLaporan, checkUserUpvoted } from '../services/laporanService';
+import { useAuth } from '../contexts/AuthContext';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -10,6 +13,11 @@ const statusColors = {
 };
 
 export default function LaporanCard({ laporan, onDelete, minimal = false }) {
+  const { profile } = useAuth();
+  const [upvoteCount, setUpvoteCount] = useState(laporan.upvote_count || 0);
+  const [isUpvoted, setIsUpvoted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const {
     id,
     deskripsi,
@@ -17,9 +25,39 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
     kecamatan,
     kelurahan,
     status,
-    created_at,
-    upvote_count
+    created_at
   } = laporan;
+
+  // Check if user has upvoted this laporan
+  useEffect(() => {
+    if (profile?.id) {
+      checkUserUpvoted(id).then((result) => {
+        if (result.success) {
+          setIsUpvoted(result.upvoted);
+        }
+      });
+    }
+  }, [id, profile?.id]);
+
+  const handleUpvote = async (e) => {
+    e.preventDefault();
+    
+    if (!profile?.id) {
+      alert('Silahkan login terlebih dahulu untuk upvote');
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await upvoteLaporan(id);
+    setIsLoading(false);
+
+    if (result.success) {
+      setIsUpvoted(result.upvoted);
+      setUpvoteCount(result.upvote_count);
+    } else {
+      alert('Gagal upvote: ' + result.error);
+    }
+  };
 
   const date = new Date(created_at).toLocaleDateString('id-ID', {
     day: 'numeric',
@@ -49,11 +87,21 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
 
       <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50">
         {!minimal ? (
-          <div className="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
-            👍 {upvote_count || 0} Upvotes
-          </div>
+          <button
+            onClick={handleUpvote}
+            disabled={isLoading}
+            className={`flex items-center text-xs font-medium px-3 py-1.5 rounded-md transition-all ${
+              isUpvoted
+                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+            } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            title={profile?.id ? 'Upvote laporan ini' : 'Login untuk upvote'}
+          >
+            <ThumbsUp size={14} className="mr-1" />
+            <span>{upvoteCount}</span>
+          </button>
         ) : (
-          <span className="text-[10px] text-gray-400 italic">Dibuat pada {date}</span>
+          <span className="text-[10px] text-gray-400 italic">Dibuat pada {new Date(created_at).toLocaleDateString('id-ID')}</span>
         )}
         
         <div className="flex space-x-2">

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getLaporanById, updateLaporanStatus } from '../services/laporanService';
+import { getLaporanById, updateLaporanStatus, upvoteLaporan, checkUserUpvoted } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
-import { ArrowLeft, Clock, MapPin, CheckCircle2, Upload, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, CheckCircle2, Upload, AlertCircle, ThumbsUp } from 'lucide-react';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -22,6 +22,9 @@ export default function LaporanDetail() {
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [upvoteCount, setUpvoteCount] = useState(0);
+  const [isUpvoted, setIsUpvoted] = useState(false);
+  const [isUpvoteLoading, setIsUpvoteLoading] = useState(false);
   
   // Admin Action State
   const [newStatus, setNewStatus] = useState('');
@@ -34,17 +37,47 @@ export default function LaporanDetail() {
     loadData();
   }, [id]);
 
+  // Check if user has upvoted after data is loaded
+  useEffect(() => {
+    if (data && profile?.id) {
+      checkUserUpvoted(id).then((result) => {
+        if (result.success) {
+          setIsUpvoted(result.upvoted);
+        }
+      });
+    }
+  }, [data, profile?.id, id]);
+
   const loadData = async () => {
     setLoading(true);
     const result = await getLaporanById(id);
     if (result.success) {
       setData(result.data);
+      setUpvoteCount(result.data.upvote_count || 0);
       setNewStatus(result.data.status);
     } else {
       alert('Laporan tidak ditemukan');
       navigate('/laporan');
     }
     setLoading(false);
+  };
+
+  const handleUpvote = async () => {
+    if (!profile?.id) {
+      alert('Silahkan login terlebih dahulu untuk upvote');
+      return;
+    }
+
+    setIsUpvoteLoading(true);
+    const result = await upvoteLaporan(id);
+    setIsUpvoteLoading(false);
+
+    if (result.success) {
+      setIsUpvoted(result.upvoted);
+      setUpvoteCount(result.upvote_count);
+    } else {
+      alert('Gagal upvote: ' + result.error);
+    }
   };
 
   const handleBuktiChange = (e) => {
@@ -110,8 +143,22 @@ export default function LaporanDetail() {
             )}
           </div>
           <div className="bg-slate-50 px-6 py-4 rounded-2xl text-center border border-slate-200 shadow-sm min-w-[120px]">
-            <span className="block text-3xl mb-2 drop-shadow-sm">👍</span>
-            <span className="font-extrabold text-slate-800 text-xl">{data.upvote_count || 0}</span>
+            <button
+              onClick={handleUpvote}
+              disabled={isUpvoteLoading}
+              className={`w-full transition-all ${
+                isUpvoted
+                  ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                  : 'hover:bg-slate-100'
+              } px-4 py-2 rounded-lg mb-2 ${isUpvoteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={profile?.id ? 'Upvote laporan ini' : 'Login untuk upvote'}
+            >
+              <ThumbsUp size={20} className="mx-auto mb-1" fill={isUpvoted ? 'currentColor' : 'none'} />
+              <span className="block text-xs font-bold uppercase">
+                {isUpvoted ? 'Sudah Upvote' : 'Upvote'}
+              </span>
+            </button>
+            <span className="font-extrabold text-slate-800 text-2xl block">{upvoteCount}</span>
             <span className="block text-xs text-slate-500 font-bold uppercase mt-1">Upvotes</span>
           </div>
         </div>
