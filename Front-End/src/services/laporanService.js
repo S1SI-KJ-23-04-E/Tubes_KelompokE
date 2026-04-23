@@ -284,11 +284,3 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     return { success: false, error: error.message };
   }
 }
-
-export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
-  return updateLaporanStatus(id, 'done', fileBukti, keterangan);
-}
-
-export async function tolakLaporan(id, keterangan = '') {
-  return updateLaporanStatus(id, 'rejected', null, keterangan);
-}

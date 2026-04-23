@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase.js';
+import { supabase } from '../lib/supabase';
 
 // Helper to handle errors
 const handleResponse = (data, error, customMessage = '') => {

@@ -143,7 +143,52 @@ export default function LaporanDetail() {
         </div>
       </div>
 
-      {/* --- ADMIN ACTION PANEL REMOVED: Status updates are now handled in the dashboard --- */}
+      {/* --- ADMIN ACTION PANEL --- */}
+{isAdmin && (
+  <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
+    <h3 className="text-2xl font-extrabold text-slate-900 mb-6">Aksi Admin</h3>
+
+    <div className="flex flex-wrap gap-4">
+      
+      {/* TERIMA */}
+      <button
+        onClick={async () => {
+          setNewStatus('verified');
+          await updateLaporanStatus(id, 'verified', null, 'Laporan telah diverifikasi');
+          loadData();
+        }}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition"
+      >
+        ✅ Verifikasi
+      </button>
+
+      {/* PROSES */}
+      <button
+        onClick={async () => {
+          setNewStatus('in_progress');
+          await updateLaporanStatus(id, 'in_progress', null, 'Sedang diproses');
+          loadData();
+        }}
+        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-bold transition"
+      >
+        🔄 Proses
+      </button>
+
+      {/* TOLAK */}
+      <button
+        onClick={async () => {
+          setNewStatus('rejected');
+          await updateLaporanStatus(id, 'rejected', null, 'Laporan ditolak');
+          loadData();
+        }}
+        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold transition"
+      >
+        ❌ Tolak
+      </button>
+
+    </div>
+  </div>
+)}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
         <h3 className="text-2xl font-extrabold text-slate-900 mb-8">Riwayat Penanganan</h3>
