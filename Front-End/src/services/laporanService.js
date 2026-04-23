@@ -295,10 +295,60 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
-export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
-  return updateLaporanStatus(id, 'done', fileBukti, keterangan);
+// --- UPVOTE FUNCTIONS ---
+
+export async function upvoteLaporan(laporanId) {
+  try {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) throw new Error('Anda belum login.');
+
+    const response = await fetch(`${apiUrl}/laporan/${laporanId}/upvote`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Gagal upvote laporan');
+    }
+
+    const result = await response.json();
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Error upvoting laporan:', error);
+    return { success: false, error: error.message };
+  }
 }
 
-export async function tolakLaporan(id, keterangan = '') {
-  return updateLaporanStatus(id, 'rejected', null, keterangan);
+export async function checkUserUpvoted(laporanId) {
+  try {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) return { success: true, upvoted: false };
+
+    const response = await fetch(`${apiUrl}/laporan/${laporanId}/user-upvoted`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Gagal cek upvote');
+    }
+
+    const result = await response.json();
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Error checking upvote:', error);
+    return { success: false, error: error.message, upvoted: false };
+  }
 }
