@@ -185,8 +185,26 @@ export default function LaporanDetail() {
         </div>
       )}
 
-      {(data.status === 'selesai' || data.status === 'done') && (
-        <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
+      {data.feedback?.length > 0 ? (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
+          <h3 className="text-2xl font-extrabold text-slate-900 mb-4">Feedback Pengguna</h3>
+          <div className="space-y-4">
+            {data.feedback.map((fb) => (
+              <div key={fb.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xl font-bold">Rating:</span>
+                  <span className="text-yellow-400 text-2xl">{'★'.repeat(fb.rating)}{'☆'.repeat(5 - fb.rating)}</span>
+                </div>
+                <p className="text-slate-700 mb-4">{fb.ulasan || 'Tidak ada ulasan.'}</p>
+                <p className="text-sm text-slate-500">Dikirim pada: {new Date(fb.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        (data.status === 'selesai' || data.status === 'done') && (
+          <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
+        )
       )}
     </div>
   );

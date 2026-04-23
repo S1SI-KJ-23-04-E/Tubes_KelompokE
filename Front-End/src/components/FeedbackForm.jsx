@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function FeedbackForm({ laporanId, onSubmitted }) {
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [ulasan, setUlasan] = useState('');
   const [loading, setLoading] = useState(false);
@@ -9,19 +11,24 @@ export default function FeedbackForm({ laporanId, onSubmitted }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) return alert('Pilih rating 1-5');
+    if (!user) return alert('Anda harus login untuk mengirim feedback.');
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('feedback').insert([{
+      const { data: insertData, error } = await supabase.from('feedback').insert([{
         laporan_id: laporanId,
         rating,
         ulasan,
-        user_id: '00000000-0000-0000-0000-000000000000' // Mock user
-      }]);
+        user_id: user.id
+      }]).select('*');
+
+      console.log('Feedback insert result', { insertData, error, laporanId, rating, ulasan, userId: user.id });
+
       if (error) throw error;
       onSubmitted();
     } catch (err) {
-      alert('Gagal mengirim feedback');
+      console.error('Feedback insert failed', err);
+      alert('Gagal mengirim feedback: ' + (err?.message || 'Terjadi kesalahan.'));
     } finally {
       setLoading(false);
     }
