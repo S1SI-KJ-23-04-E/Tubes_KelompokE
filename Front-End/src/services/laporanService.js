@@ -77,7 +77,8 @@ export async function getLaporanById(id) {
         *,
         kecamatan ( id, nama_kecamatan ),
         kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
+        profiles ( id, nama ),
+        feedback ( id, rating, ulasan, user_id, created_at )
       `)
       .eq('id', id)
       .single();
@@ -104,9 +105,18 @@ export async function getLaporanById(id) {
     if (!bError) bukti = bData || null;
     else console.warn('bukti_selesai fetch warning:', bError.message);
 
+    // Fetch feedback separately to avoid relation mapping issues
+    let feedback = [];
+    const { data: fData, error: fError } = await supabase
+      .from('feedback')
+      .select('id, rating, ulasan, user_id, created_at')
+      .eq('laporan_id', id);
+    if (!fError) feedback = fData || [];
+    else console.warn('feedback fetch warning:', fError.message);
+
     return {
       success: true,
-      data: { ...data, history, bukti }
+      data: { ...data, history, bukti, feedback }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
