@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getLaporanById, updateLaporanStatus } from '../services/laporanService';
+import { getLaporanById, updateLaporanStatus, upvoteLaporan, checkUserUpvoted } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
-import { ArrowLeft, Clock, MapPin, CheckCircle2, Upload, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, CheckCircle2, Upload, AlertCircle, ThumbsUp } from 'lucide-react';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -22,6 +22,9 @@ export default function LaporanDetail() {
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [upvoteCount, setUpvoteCount] = useState(0);
+  const [isUpvoted, setIsUpvoted] = useState(false);
+  const [isUpvoteLoading, setIsUpvoteLoading] = useState(false);
   
   // Admin Action State
   const [newStatus, setNewStatus] = useState('');
@@ -34,17 +37,47 @@ export default function LaporanDetail() {
     loadData();
   }, [id]);
 
+  // Check if user has upvoted after data is loaded
+  useEffect(() => {
+    if (data && profile?.id) {
+      checkUserUpvoted(id).then((result) => {
+        if (result.success) {
+          setIsUpvoted(result.upvoted);
+        }
+      });
+    }
+  }, [data, profile?.id, id]);
+
   const loadData = async () => {
     setLoading(true);
     const result = await getLaporanById(id);
     if (result.success) {
       setData(result.data);
+      setUpvoteCount(result.data.upvote_count || 0);
       setNewStatus(result.data.status);
     } else {
       alert('Laporan tidak ditemukan');
       navigate('/laporan');
     }
     setLoading(false);
+  };
+
+  const handleUpvote = async () => {
+    if (!profile?.id) {
+      alert('Silahkan login terlebih dahulu untuk upvote');
+      return;
+    }
+
+    setIsUpvoteLoading(true);
+    const result = await upvoteLaporan(id);
+    setIsUpvoteLoading(false);
+
+    if (result.success) {
+      setIsUpvoted(result.upvoted);
+      setUpvoteCount(result.upvote_count);
+    } else {
+      alert('Gagal upvote: ' + result.error);
+    }
   };
 
   const handleBuktiChange = (e) => {
@@ -110,8 +143,22 @@ export default function LaporanDetail() {
             )}
           </div>
           <div className="bg-slate-50 px-6 py-4 rounded-2xl text-center border border-slate-200 shadow-sm min-w-[120px]">
-            <span className="block text-3xl mb-2 drop-shadow-sm">👍</span>
-            <span className="font-extrabold text-slate-800 text-xl">{data.upvote_count || 0}</span>
+            <button
+              onClick={handleUpvote}
+              disabled={isUpvoteLoading}
+              className={`w-full transition-all ${
+                isUpvoted
+                  ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                  : 'hover:bg-slate-100'
+              } px-4 py-2 rounded-lg mb-2 ${isUpvoteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={profile?.id ? 'Upvote laporan ini' : 'Login untuk upvote'}
+            >
+              <ThumbsUp size={20} className="mx-auto mb-1" fill={isUpvoted ? 'currentColor' : 'none'} />
+              <span className="block text-xs font-bold uppercase">
+                {isUpvoted ? 'Sudah Upvote' : 'Upvote'}
+              </span>
+            </button>
+            <span className="font-extrabold text-slate-800 text-2xl block">{upvoteCount}</span>
             <span className="block text-xs text-slate-500 font-bold uppercase mt-1">Upvotes</span>
           </div>
         </div>
@@ -143,7 +190,52 @@ export default function LaporanDetail() {
         </div>
       </div>
 
-      {/* --- ADMIN ACTION PANEL REMOVED: Status updates are now handled in the dashboard --- */}
+      {/* --- ADMIN ACTION PANEL --- */}
+{isAdmin && (
+  <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
+    <h3 className="text-2xl font-extrabold text-slate-900 mb-6">Aksi Admin</h3>
+
+    <div className="flex flex-wrap gap-4">
+      
+      {/* TERIMA */}
+      <button
+        onClick={async () => {
+          setNewStatus('verified');
+          await updateLaporanStatus(id, 'verified', null, 'Laporan telah diverifikasi');
+          loadData();
+        }}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition"
+      >
+        ✅ Verifikasi
+      </button>
+
+      {/* PROSES */}
+      <button
+        onClick={async () => {
+          setNewStatus('in_progress');
+          await updateLaporanStatus(id, 'in_progress', null, 'Sedang diproses');
+          loadData();
+        }}
+        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-bold transition"
+      >
+        🔄 Proses
+      </button>
+
+      {/* TOLAK */}
+      <button
+        onClick={async () => {
+          setNewStatus('rejected');
+          await updateLaporanStatus(id, 'rejected', null, 'Laporan ditolak');
+          loadData();
+        }}
+        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold transition"
+      >
+        ❌ Tolak
+      </button>
+
+    </div>
+  </div>
+)}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
         <h3 className="text-2xl font-extrabold text-slate-900 mb-8">Riwayat Penanganan</h3>
