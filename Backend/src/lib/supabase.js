@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: './.env' });
 import { createClient } from '@supabase/supabase-js';
 
 // Admin client (service role) — bypass RLS untuk operasi backend
