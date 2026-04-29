@@ -5,12 +5,12 @@ import cors from 'cors';
 import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
-import profilesRoutes from './routes/profiles.js';
+import profileRoutes from './routes/profile.js';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
 
-// ✅ CORS (lebih aman & fleksibel)
+// ✅ CORS
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
@@ -19,7 +19,7 @@ app.use(cors({
 // ✅ Middleware
 app.use(express.json());
 
-// ✅ Debug log (biar keliatan request masuk)
+// ✅ Debug log 
 app.use((req, res, next) => {
   console.log(`➡️ ${req.method} ${req.url}`);
   next();
@@ -29,7 +29,7 @@ app.use((req, res, next) => {
 app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/profiles', profilesRoutes);
+app.use('/api/profile', profileRoutes);
 
 // ✅ Health check
 app.get('/api/health', (req, res) => {
@@ -39,7 +39,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ✅ 404 handler (biar ga silent error)
+// ✅ 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route tidak ditemukan' });
 });

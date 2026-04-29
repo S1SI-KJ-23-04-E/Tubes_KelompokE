@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8001/api/profiles";
+const BASE_URL = "http://localhost:8001/api/profile";
 
 // GET PROFILE
 export const getProfile = async (id) => {
