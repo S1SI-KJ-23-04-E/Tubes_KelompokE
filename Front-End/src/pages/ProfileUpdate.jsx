@@ -64,74 +64,96 @@ const ProfileUpdate = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100 px-4">
+    
+    <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200 p-8">
 
-        {/* AVATAR */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-indigo-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
-            {form.nama?.charAt(0)?.toUpperCase() || "U"}
-          </div>
-          <h2 className="mt-4 text-xl font-bold text-slate-800">
-            Edit Profil
-          </h2>
+      {/* AVATAR */}
+      <div className="flex flex-col items-center mb-6">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg shadow-indigo-200">
+          {form.nama?.charAt(0)?.toUpperCase() || "U"}
         </div>
 
-        {/* ALERT */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-600 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+        <h2 className="mt-4 text-2xl font-extrabold text-slate-800">
+          Edit Profil
+        </h2>
 
-        {message && (
-          <div className="mb-4 p-3 bg-green-100 text-green-600 rounded-lg text-sm">
-            {message}
-          </div>
-        )}
+        <p className="text-sm text-slate-500 mt-1">
+          Perbarui informasi akun kamu
+        </p>
+      </div>
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ALERT */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
 
+      {message && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 rounded-xl text-sm">
+          {message}
+        </div>
+      )}
+
+      {/* FORM */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Nama */}
+        <div>
+          <label className="text-sm font-semibold text-slate-600">
+            Nama
+          </label>
           <input
             type="text"
             name="nama"
             value={form.nama}
             onChange={handleChange}
-            placeholder="Nama"
-            className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
+            className="mt-1 w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
           />
+        </div>
 
+        {/* Alamat */}
+        <div>
+          <label className="text-sm font-semibold text-slate-600">
+            Alamat
+          </label>
           <input
             type="text"
             name="alamat"
             value={form.alamat}
             onChange={handleChange}
-            placeholder="Alamat"
-            className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
+            className="mt-1 w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
           />
+        </div>
 
+        {/* No HP */}
+        <div>
+          <label className="text-sm font-semibold text-slate-600">
+            No HP
+          </label>
           <input
             type="text"
             name="no_hp"
             value={form.no_hp}
             onChange={handleChange}
-            placeholder="No HP"
-            className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
+            className="mt-1 w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
           />
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition"
-          >
-            {loading ? "Menyimpan..." : "Simpan Profil"}
-          </button>
+        {/* BUTTON */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 rounded-xl font-bold shadow-md shadow-indigo-200 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Menyimpan..." : "Simpan Perubahan"}
+        </button>
 
-        </form>
-      </div>
+      </form>
     </div>
-  );
+  </div>
+);
 };
 
 export default ProfileUpdate;
