@@ -285,18 +285,40 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
-export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
-  return await updateLaporanStatus(id, 'selesai', fileBukti, keterangan);
-}
+// ===============================
+// UPLOAD BUKTI (PAKAI URL)
+// ===============================
+export async function uploadBuktiURL(id, foto_url, keterangan = '') {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-export async function tolakLaporan(id, alasan = '') {
-  return await updateLaporanStatus(id, 'ditolak', null, alasan);
-}
+    if (!token) {
+      throw new Error('Token otentikasi tidak tersedia. Silakan login ulang.');
+    }
 
-export async function tolakLaporan(id, alasan = '') {
-  if (!alasan) {
-    return { success: false, error: 'Alasan wajib diisi' };
+    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: 'done',
+        keterangan,
+        foto_url,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Gagal mengunggah bukti.');
+    }
+    return data;
+
+  } catch (error) {
+    console.error('Error upload bukti:', error);
+    return { success: false, error: error.message || 'Error upload bukti' };
   }
-  return await updateLaporanStatus(id, 'ditolak', null, alasan);
 }
-
