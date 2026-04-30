@@ -77,8 +77,7 @@ export async function getLaporanById(id) {
         *,
         kecamatan ( id, nama_kecamatan ),
         kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama ),
-        feedback ( id, rating, ulasan, user_id, created_at )
+        profiles ( id, nama )
       `)
       .eq('id', id)
       .single();
@@ -105,18 +104,9 @@ export async function getLaporanById(id) {
     if (!bError) bukti = bData || null;
     else console.warn('bukti_selesai fetch warning:', bError.message);
 
-    // Fetch feedback separately to avoid relation mapping issues
-    let feedback = [];
-    const { data: fData, error: fError } = await supabase
-      .from('feedback')
-      .select('id, rating, ulasan, user_id, created_at')
-      .eq('laporan_id', id);
-    if (!fError) feedback = fData || [];
-    else console.warn('feedback fetch warning:', fError.message);
-
     return {
       success: true,
-      data: { ...data, history, bukti, feedback }
+      data: { ...data, history, bukti }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
@@ -295,60 +285,40 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
-// --- UPVOTE FUNCTIONS ---
-
-export async function upvoteLaporan(laporanId) {
+// ===============================
+// UPLOAD BUKTI (PAKAI URL)
+// ===============================
+export async function uploadBuktiURL(id, foto_url, keterangan = '') {
   try {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
     const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user) throw new Error('Anda belum login.');
+    const token = session?.access_token;
 
-    const response = await fetch(`${apiUrl}/laporan/${laporanId}/upvote`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Gagal upvote laporan');
+    if (!token) {
+      throw new Error('Token otentikasi tidak tersedia. Silakan login ulang.');
     }
 
-    const result = await response.json();
-    return { success: true, ...result };
-  } catch (error) {
-    console.error('Error upvoting laporan:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-export async function checkUserUpvoted(laporanId) {
-  try {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user) return { success: true, upvoted: false };
-
-    const response = await fetch(`${apiUrl}/laporan/${laporanId}/user-upvoted`, {
-      method: 'GET',
+    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/status`, {
+      method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: 'done',
+        keterangan,
+        foto_url,
+      }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Gagal cek upvote');
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Gagal mengunggah bukti.');
     }
+    return data;
 
-    const result = await response.json();
-    return { success: true, ...result };
   } catch (error) {
-    console.error('Error checking upvote:', error);
-    return { success: false, error: error.message, upvoted: false };
+    console.error('Error upload bukti:', error);
+    return { success: false, error: error.message || 'Error upload bukti' };
   }
 }

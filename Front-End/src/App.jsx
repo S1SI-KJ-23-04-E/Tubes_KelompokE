@@ -1,8 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LaporanList from './pages/LaporanList';
 import LaporanForm from './pages/LaporanForm';
 import LaporanDetail from './pages/LaporanDetail';
+import ProfileUpdate from './pages/ProfileUpdate';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { LogOut } from 'lucide-react';
@@ -28,6 +29,8 @@ function Navbar() {
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        
+        {/* LOGO */}
         <div className="flex items-center space-x-3 cursor-pointer">
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-200">
             S
@@ -35,11 +38,19 @@ function Navbar() {
           <span className="font-extrabold text-2xl tracking-tight text-slate-800">SIMIKOT</span>
         </div>
         
+        {/* USER */}
         {user && (
           <div className="flex items-center space-x-4">
+            <Link
+              to="/profile"
+              className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition"
+            >
+              Profil
+            </Link>
             <span className="text-sm font-bold text-slate-600 hidden sm:block">
               Halo, {profile?.nama || user.email}
             </span>
+
             <button 
               onClick={logout}
               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
@@ -61,27 +72,39 @@ function AppRoutes() {
       <Navbar />
       <main className="pb-20">
         <Routes>
-          {/* Public Routes */}
+
+          {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
-          {/* Protected Routes */}
+
+          {/* Default */}
           <Route path="/" element={<Navigate to="/laporan" replace />} />
+
+          {/* Protected */}
           <Route path="/laporan" element={
             <ProtectedRoute>
               <LaporanList />
             </ProtectedRoute>
           } />
+
           <Route path="/laporan/baru" element={
             <ProtectedRoute>
               <LaporanForm />
             </ProtectedRoute>
           } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfileUpdate />
+            </ProtectedRoute>
+          } />
+
           <Route path="/laporan/:id" element={
             <ProtectedRoute>
               <LaporanDetail />
             </ProtectedRoute>
           } />
+
         </Routes>
       </main>
     </div>
