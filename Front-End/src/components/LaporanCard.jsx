@@ -1,7 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
-import { useState } from "react";
-import UploadBuktiModal from "./UploadBukti";
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -14,9 +12,7 @@ const statusColors = {
 export default function LaporanCard({ 
   laporan, 
   onDelete, 
-  minimal = false, 
-  isAdmin = false,        // ✅ TAMBAHAN
-  onUpdate                // ✅ TAMBAHAN
+  minimal = false
 }) {
   const {
     id,
@@ -28,8 +24,6 @@ export default function LaporanCard({
     created_at,
     upvote_count
   } = laporan;
-
-  const [showUpload, setShowUpload] = useState(false); // ✅ TAMBAHAN
 
   const date = new Date(created_at).toLocaleDateString('id-ID', {
     day: 'numeric',
@@ -72,7 +66,6 @@ export default function LaporanCard({
         
         <div className="flex space-x-2 items-center">
 
-          {/* DELETE (EXISTING) */}
           {status === 'pending' && onDelete && (
             <button 
               onClick={(e) => { e.preventDefault(); onDelete(id); }}
@@ -80,16 +73,6 @@ export default function LaporanCard({
               title="Hapus Laporan"
             >
               <Trash2 size={16} />
-            </button>
-          )}
-
-          {/* ✅ BUTTON ADMIN (DEV-58) */}
-          {isAdmin && status === 'verified' && (
-            <button
-              onClick={() => setShowUpload(true)}
-              className="text-xs bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-600 hover:text-white transition"
-            >
-              Selesaikan + Upload
             </button>
           )}
 
@@ -101,15 +84,6 @@ export default function LaporanCard({
           </Link>
         </div>
       </div>
-
-      {/* ✅ MODAL UPLOAD */}
-      {showUpload && (
-        <UploadBukti
-          laporanId={id}
-          onClose={() => setShowUpload(false)}
-          onSuccess={onUpdate}
-        />
-      )}
     </div>
   );
-}
+}

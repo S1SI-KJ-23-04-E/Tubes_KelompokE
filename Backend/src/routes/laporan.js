@@ -65,7 +65,8 @@ router.get('/:id', async (req, res) => {
       kelurahan:kelurahan_id(id, nama_kelurahan),
       profiles:pelapor_id(id, nama),
       history_laporan(*),
-      bukti_selesai(*)
+      bukti_selesai(*),
+      feedback(*)
     `)
     .eq('id', req.params.id)
     .single();

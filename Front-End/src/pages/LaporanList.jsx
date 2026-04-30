@@ -212,7 +212,7 @@ function AdminView({ laporan, onStatus, onPriority }) {
                   {item.status === 'pending' && <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all">Verifikasi Laporan</button>}
                   {(item.status === 'verified' || item.status === 'pending') && <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all">Mulai Perbaikan</button>}
                   {item.status === 'in_progress' && <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all">Tandai Selesai</button>}
-                  <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all">Tolak Laporan</button>
+                  {item.status === 'pending' && <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all">Tolak Laporan</button>}
                </div>
             </div>
           </div>
