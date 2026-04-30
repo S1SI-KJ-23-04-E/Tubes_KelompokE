@@ -65,16 +65,23 @@ export default function LaporanList() {
   const loadData = async () => {
     if (laporanMasuk.length === 0) setLoading(true);
     try {
-      if (isAdmin && profile?.kecamatan_id) {
+      if (isAdmin) {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`${API_URL}/admin/laporan/kecamatan/${profile.kecamatan_id}?search=${searchQuery}`, {
+        let adminUrl;
+        if (profile?.kecamatan_id) {
+          adminUrl = `${API_URL}/admin/laporan/kecamatan/${profile.kecamatan_id}?search=${searchQuery}`;
+        } else {
+          // Super admin tanpa kecamatan_id — ambil semua laporan
+          adminUrl = `${API_URL}/admin/laporan/all?search=${searchQuery}`;
+        }
+        const res = await fetch(adminUrl, {
           headers: { 'Authorization': `Bearer ${session?.access_token}` }
         });
         const json = await res.json();
         if (json.success) setLaporanMasuk(json.data || []);
       } 
       const feedRes = await getAllLaporan();
-      if (feedRes.success) setLaporanPublik(feedRes.data?.filter(i => i.pelapor_id !== user?.id) || []);
+      if (feedRes.success) setLaporanPublik(feedRes.data || []);
       if (user) {
         const myRes = await getLaporanByUser();
         if (myRes.success) setLaporanSaya(myRes.data || []);
