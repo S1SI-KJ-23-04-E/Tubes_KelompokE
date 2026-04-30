@@ -224,18 +224,7 @@ export default function LaporanDetail() {
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dukungan Publik</p>
                   <p className="text-2xl font-black text-slate-900 leading-none">{data.upvote_count || 0} <span className="text-xs text-slate-400 ml-1 font-bold">Suara</span></p>
                 </div>
-                <button
-                  onClick={handleUpvote}
-                  disabled={upvoteLoading || !user}
-                  className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${
-                    upvoted 
-                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-[0.98]' 
-                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100'
-                  } disabled:opacity-50`}
-                >
-                  <ThumbsUp size={16} className={upvoted ? 'fill-white' : ''} />
-                  {upvoted ? 'Didukung' : 'Dukung'}
-                </button>
+                
               </div>
             </div>
           </div>
