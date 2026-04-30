@@ -71,48 +71,63 @@ export async function getLaporanByUser() {
 
 export async function getLaporanById(id) {
   try {
-    const { data, error } = await supabase
-      .from('laporan')
-      .select(`
-        *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
-      `)
-      .eq('id', id)
-      .single();
+    const response = await fetch(`${API_URL}/laporan/${id}`);
+    const result = await response.json();
 
-    if (error) throw error;
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Gagal mengambil detail laporan');
+    }
 
-    // Fetch history — graceful, won't block on failure
-    let history = [];
-    const { data: hData, error: hError } = await supabase
-      .from('history_laporan')
-      .select('*')
-      .eq('laporan_id', id)
-      .order('created_at', { ascending: true });
-    if (!hError) history = hData || [];
-    else console.warn('history_laporan fetch warning:', hError.message);
-
-    // Fetch bukti_selesai — graceful
-    let bukti = null;
-    const { data: bData, error: bError } = await supabase
-      .from('bukti_selesai')
-      .select('*')
-      .eq('laporan_id', id)
-      .maybeSingle();
-    if (!bError) bukti = bData || null;
-    else console.warn('bukti_selesai fetch warning:', bError.message);
-
+    // Backend endpoint returns data with history_laporan as 'history_laporan' 
+    // and bukti_selesai as 'bukti_selesai'.
+    // We map them to 'history' and 'bukti' for frontend compatibility.
+    const data = result.data;
     return {
       success: true,
-      data: { ...data, history, bukti }
+      data: { 
+        ...data, 
+        history: data.history_laporan || [], 
+        bukti: data.bukti_selesai?.[0] || null,
+        feedback: data.feedback || []
+      }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
     return { success: false, error: error.message, data: null };
   }
 }
+
+export async function upvoteLaporan(id) {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/laporan/${id}/upvote`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Gagal upvote');
+    return result;
+  } catch (error) {
+    console.error('Upvote failed:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function checkUserUpvoted(id) {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/laporan/${id}/user-upvoted`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Gagal cek upvote');
+    return result;
+  } catch (error) {
+    console.error('Check upvote failed:', error);
+    return { success: false, upvoted: false };
+  }
+}
+
 
 export async function deleteLaporan(id) {
   try {
