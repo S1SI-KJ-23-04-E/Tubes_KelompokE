@@ -9,18 +9,20 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
 
     const { data, error } = await supabaseAdmin
-      .from("profile")
+      .from("profiles")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle(); //
 
     if (error) {
-      return res.status(400).json({ error: error.message });
+      console.log("ERROR:", error);
+      return res.json(null); // 
     }
 
-    res.json(data);
+    res.json(data || null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log("SERVER ERROR:", err);
+    res.json(null);
   }
 });
 
