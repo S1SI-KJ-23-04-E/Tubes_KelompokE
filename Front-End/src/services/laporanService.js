@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -7,40 +9,38 @@ async function getCurrentUserId() {
   return session.user.id;
 }
 
+// Get auth token for backend API calls
+async function getAuthToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Anda belum login.');
+  return session.access_token;
+}
+
 export async function createLaporan(data) {
   try {
-    const userId = await getCurrentUserId();
+    const token = await getAuthToken();
     
-    const { data: result, error } = await supabase
-      .from('laporan')
-      .insert([
-        {
-          pelapor_id: userId, 
-          kecamatan_id: data.kecamatan_id,
-          kelurahan_id: data.kelurahan_id,
-          deskripsi: data.deskripsi,
-          alamat: data.alamat,
-          foto_url: data.foto_url,
-          status: 'pending'
-        }
-      ])
-      .select();
+    const response = await fetch(`${API_URL}/laporan`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        kecamatan_id: data.kecamatan_id,
+        kelurahan_id: data.kelurahan_id,
+        deskripsi: data.deskripsi,
+        alamat: data.alamat,
+        foto_url: data.foto_url
+      })
+    });
 
-    if (error) throw error;
-    
-    // Also insert to history_laporan
-    if (result && result.length > 0) {
-      const { error: hErr } = await supabase.from('history_laporan').insert([
-        {
-          laporan_id: result[0].id,
-          status: 'pending',
-          changed_by: userId
-        }
-      ]);
-      if (hErr) console.warn('History insert warning:', hErr.message);
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Gagal membuat laporan');
     }
 
-    return { success: true, data: result };
+    return { success: true, data: result.data };
   } catch (error) {
     console.error('Error creating laporan:', error);
     return { success: false, error: error.message };
@@ -49,20 +49,20 @@ export async function createLaporan(data) {
 
 export async function getLaporanByUser() {
   try {
-    const userId = await getCurrentUserId();
+    const token = await getAuthToken();
     
-    const { data, error } = await supabase
-      .from('laporan')
-      .select(`
-        *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan )
-      `)
-      .eq('pelapor_id', userId)
-      .order('created_at', { ascending: false });
+    const response = await fetch(`${API_URL}/laporan/user`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
 
-    if (error) throw error;
-    return { success: true, data: data || [] };
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Gagal mengambil laporan');
+    }
+
+    return { success: true, data: result.data || [] };
   } catch (error) {
     console.error('Error getting laporan:', error);
     return { success: false, error: error.message, data: [] };
@@ -221,18 +221,14 @@ export async function getLaporanByKecamatan(kecamatanId) {
 
 export async function getAllLaporan() {
   try {
-    const { data, error } = await supabase
-      .from('laporan')
-      .select(`
-        *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
-      `)
-      .order('created_at', { ascending: false });
+    const response = await fetch(`${API_URL}/laporan`);
 
-    if (error) throw error;
-    return { success: true, data: data || [] };
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Gagal mengambil semua laporan');
+    }
+
+    return { success: true, data: result.data || [] };
   } catch (error) {
     console.error('Error getting all laporan:', error);
     return { success: false, error: error.message, data: [] };

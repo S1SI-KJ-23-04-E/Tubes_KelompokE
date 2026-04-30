@@ -39,6 +39,22 @@ router.get('/user', authenticate, async (req, res) => {
   res.json({ success: true, data });
 });
 
+// GET /api/laporan — Semua laporan (public feed)
+router.get('/', async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('laporan')
+    .select(`
+      *,
+      kecamatan:kecamatan_id(id, nama_kecamatan),
+      kelurahan:kelurahan_id(id, nama_kelurahan),
+      profiles:pelapor_id(id, nama)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ success: false, error: error.message, data: [] });
+  res.json({ success: true, data: data || [] });
+});
+
 // GET /api/laporan/:id — Detail laporan
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabaseAdmin
