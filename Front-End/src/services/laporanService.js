@@ -75,20 +75,14 @@ export async function getLaporanById(id) {
       .from('laporan')
       .select(`
         *,
-        kecamatan:kecamatan_id(id,nama_kecamatan),
-        kelurahan:kelurahan_id(id,nama_kelurahan),
-        profiles:pelapor_id(id,nama),
-        kendala_laporan(*)
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan ),
+        profiles ( id, nama )
       `)
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('Query error full:', error);
-      throw error;
-    }
-
-    console.log('Laporan data:', data);
+    if (error) throw error;
 
     // Fetch history — graceful, won't block on failure
     let history = [];
@@ -291,18 +285,93 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
-export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
-  return updateLaporanStatus(id, 'done', fileBukti, keterangan);
+// ===============================
+// UPLOAD BUKTI (PAKAI URL)
+// ===============================
+export async function uploadBuktiURL(id, foto_url, keterangan = '') {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) {
+      throw new Error('Token otentikasi tidak tersedia. Silakan login ulang.');
+    }
+
+    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: 'done',
+        keterangan,
+        foto_url,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Gagal mengunggah bukti.');
+    }
+    return data;
+
+  } catch (error) {
+    console.error('Error upload bukti:', error);
+    return { success: false, error: error.message || 'Error upload bukti' };
+  }
 }
 
-export async function tolakLaporan(id, keterangan = '') {
-  return updateLaporanStatus(id, 'rejected', null, keterangan);
+// ===============================
+// TAMBAH INFORMASI ADMIN (DEV-63)
+// ===============================
+export async function tambahInformasi(id, catatan) {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) throw new Error("Belum login");
+
+    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/informasi`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ catatan }),
+    });
+
+    return await res.json();
+
+  } catch (err) {
+    console.error("Error tambah informasi:", err);
+    return { success: false };
+  }
 }
 
-export const createKendala = async (laporan_id, deskripsi) => {
-  const { data, error } = await supabase
-    .from('kendala_laporan')
-    .insert([{ laporan_id, deskripsi }]);
+// ===============================
+// GET INFORMASI ADMIN
+// ===============================
+export async function getInformasi(id) {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-  return { data, error };
-};
+    if (!token) throw new Error("Belum login");
+
+    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/informasi`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return await res.json();
+
+  } catch (err) {
+    console.error("Error get informasi:", err);
+    return { success: false };
+  }
+}
