@@ -1,4 +1,4 @@
-﻿import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
@@ -88,8 +88,6 @@ export async function getLaporanById(id) {
       throw error;
     }
 
-    console.log('Laporan data:', data);
-
     // Fetch history — graceful, won't block on failure
     let history = [];
     const { data: hData, error: hError } = await supabase
@@ -98,7 +96,6 @@ export async function getLaporanById(id) {
       .eq('laporan_id', id)
       .order('created_at', { ascending: true });
     if (!hError) history = hData || [];
-    else console.warn('history_laporan fetch warning:', hError.message);
 
     // Fetch bukti_selesai — graceful
     let bukti = null;
@@ -108,7 +105,6 @@ export async function getLaporanById(id) {
       .eq('laporan_id', id)
       .maybeSingle();
     if (!bError) bukti = bData || null;
-    else console.warn('bukti_selesai fetch warning:', bError.message);
 
     return {
       success: true,
@@ -227,13 +223,11 @@ export async function getAllLaporan(excludeUserId = null) {
       `)
       .order('created_at', { ascending: false });
 
-    // If caller provides an excludeUserId, filter out reports from that user at the query level
     if (excludeUserId) {
       query = query.neq('pelapor_id', excludeUserId);
     }
 
     const { data, error } = await query;
-
     if (error) throw error;
     return { success: true, data: data || [] };
   } catch (error) {
@@ -246,7 +240,6 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   try {
     const userId = await getCurrentUserId();
     
-    // 1. Update status in laporan table
     const { error: updateError } = await supabase
       .from('laporan')
       .update({ status: newStatus })
@@ -254,7 +247,6 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
 
     if (updateError) throw updateError;
 
-    // 2. Insert into history_laporan
     const { error: historyErr } = await supabase.from('history_laporan').insert([
       {
         laporan_id: id,
@@ -263,19 +255,13 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
         catatan: keterangan
       }
     ]);
-    if (historyErr) console.warn('History insert warning:', historyErr.message);
 
-    // 3. Handle bukti selesai if status is 'selesai' and a file is provided
     if (newStatus === 'selesai' && fileBukti) {
       const fileExt = fileBukti.name.split('.').pop();
       const fileName = `bukti_${id}_${Math.random()}.${fileExt}`;
       const filePath = `bukti/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('laporan-photos')
-        .upload(filePath, fileBukti);
-
-      if (uploadError) throw uploadError;
+      await supabase.storage.from('laporan-photos').upload(filePath, fileBukti);
 
       const { data: publicUrlData } = supabase.storage
         .from('laporan-photos')
@@ -296,7 +282,6 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     console.error('Error updating status:', error);
     return { success: false, error: error.message };
   }
-<<<<<<< HEAD
 }
 
 export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
@@ -308,43 +293,74 @@ export async function tolakLaporan(id, keterangan = '') {
 }
 
 export const createKendala = async (laporan_id, deskripsi) => {
-  const { data, error } = await supabase
-    .from('kendala_laporan')
-    .insert([{ laporan_id, deskripsi }]);
+  try {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from('kendala_laporan')
+      .insert([{ 
+        laporan_id, 
+        deskripsi: deskripsi,
+        petugas_id: userId
+      }]);
 
-  return { data, error };
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error creating kendala:', error);
+    return { success: false, error: error.message };
+  }
 };
 
-// ✅ TAMBAHKAN DI SINI
+export async function checkUserUpvoted(laporanId) {
+  try {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from('upvote')
+      .select('id')
+      .eq('laporan_id', laporanId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return { success: true, upvoted: !!data };
+  } catch (error) {
+    console.error('Error checking upvote:', error);
+    return { success: false, upvoted: false };
+  }
+}
+
 export async function upvoteLaporan(laporanId) {
   try {
     const userId = await getCurrentUserId();
 
     const { data: existing } = await supabase
-      .from('upvote_laporan')
+      .from('upvote')
       .select('*')
       .eq('laporan_id', laporanId)
       .eq('user_id', userId)
       .maybeSingle();
 
+    const { data: laporan } = await supabase
+      .from('laporan')
+      .select('upvote_count')
+      .eq('id', laporanId)
+      .single();
+
+    let newCount = laporan?.upvote_count || 0;
+
     if (existing) {
-      await supabase
-        .from('upvote_laporan')
-        .delete()
-        .eq('id', existing.id);
-
-      return { success: true, upvoted: false };
+      await supabase.from('upvote').delete().eq('id', existing.id);
+      newCount = Math.max(0, newCount - 1);
     } else {
-      await supabase
-        .from('upvote_laporan')
-        .insert([{ laporan_id: laporanId, user_id: userId }]);
-
-      return { success: true, upvoted: true };
+      await supabase.from('upvote').insert([{ laporan_id: laporanId, user_id: userId }]);
+      newCount = newCount + 1;
     }
+
+    await supabase.from('laporan').update({ upvote_count: newCount }).eq('id', laporanId);
+
+    return { success: true, upvoted: !existing, upvote_count: newCount };
   } catch (error) {
     console.error('Error upvote:', error);
-    return { success: false };
+    return { success: false, error: error.message };
   }
-=======
->>>>>>> Panji_Branch
 }

@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
@@ -59,18 +59,8 @@ router.get('/', async (req, res) => {
 
 // GET /api/laporan/:id — Detail laporan
 router.get('/:id', async (req, res) => {
-  const selectQuery = [
-    '*',
-    'kecamatan:kecamatan_id(id, nama_kecamatan)',
-    'kelurahan:kelurahan_id(id, nama_kelurahan)',
-    'profiles:pelapor_id(id, nama)',
-    'history_laporan(*)',
-    'bukti_selesai(*)'
-  ].join(',');
-
   const { data, error } = await supabaseAdmin
     .from('laporan')
-<<<<<<< HEAD
     .select(`
       *,
       kecamatan:kecamatan_id(id, nama_kecamatan),
@@ -80,9 +70,6 @@ router.get('/:id', async (req, res) => {
       bukti_selesai(*),
       feedback(*)
     `)
-=======
-    .select(selectQuery)
->>>>>>> Panji_Branch
     .eq('id', req.params.id)
     .single();
 
@@ -103,14 +90,12 @@ router.delete('/:id', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-<<<<<<< HEAD
 // POST /api/laporan/:id/upvote — Upvote laporan
 router.post('/:id/upvote', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
 
   try {
-    // Cek apakah user sudah vote
     const { data: existing, error: checkError } = await supabaseAdmin
       .from('upvote')
       .select('id')
@@ -122,7 +107,6 @@ router.post('/:id/upvote', authenticate, async (req, res) => {
       return res.status(500).json({ success: false, error: checkError.message });
     }
 
-    // Get current upvote count
     const { data: laporan, error: fetchError } = await supabaseAdmin
       .from('laporan')
       .select('upvote_count')
@@ -132,41 +116,14 @@ router.post('/:id/upvote', authenticate, async (req, res) => {
     if (fetchError) return res.status(500).json({ success: false, error: fetchError.message });
 
     if (existing) {
-      // User sudah vote, hapus vote (unlike)
-      const { error: deleteError } = await supabaseAdmin
-        .from('upvote')
-        .delete()
-        .eq('id', existing.id);
-
-      if (deleteError) return res.status(500).json({ success: false, error: deleteError.message });
-
-      // Update upvote_count di laporan (kurangi 1)
+      await supabaseAdmin.from('upvote').delete().eq('id', existing.id);
       const newCount = Math.max(0, (laporan.upvote_count || 0) - 1);
-      const { error: updateError } = await supabaseAdmin
-        .from('laporan')
-        .update({ upvote_count: newCount })
-        .eq('id', laporanId);
-
-      if (updateError) return res.status(500).json({ success: false, error: updateError.message });
-
+      await supabaseAdmin.from('laporan').update({ upvote_count: newCount }).eq('id', laporanId);
       return res.json({ success: true, upvoted: false, upvote_count: newCount });
     } else {
-      // User belum vote, tambahkan vote
-      const { error: insertError } = await supabaseAdmin
-        .from('upvote')
-        .insert({ laporan_id: laporanId, user_id: userId });
-
-      if (insertError) return res.status(500).json({ success: false, error: insertError.message });
-
-      // Update upvote_count di laporan (tambah 1)
+      await supabaseAdmin.from('upvote').insert({ laporan_id: laporanId, user_id: userId });
       const newCount = (laporan.upvote_count || 0) + 1;
-      const { error: updateError } = await supabaseAdmin
-        .from('laporan')
-        .update({ upvote_count: newCount })
-        .eq('id', laporanId);
-
-      if (updateError) return res.status(500).json({ success: false, error: updateError.message });
-
+      await supabaseAdmin.from('laporan').update({ upvote_count: newCount }).eq('id', laporanId);
       return res.json({ success: true, upvoted: true, upvote_count: newCount });
     }
   } catch (error) {
@@ -197,8 +154,6 @@ router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   }
 });
 
-export default router;
-=======
 // POST /api/laporan/:id/selesai — Upload bukti & set selesai (ADMIN/PETUGAS)
 router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res) => {
   try {
@@ -208,21 +163,16 @@ router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res
     const userId = req.user.id;
 
     if (!file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Foto bukti wajib diupload'
-      });
+      return res.status(400).json({ success: false, message: 'Foto bukti wajib diupload' });
     }
 
     const fileExt = file.originalname.split('.').pop();
-    const fileName = 'bukti_' + id + '_' + Date.now() + '.' + fileExt;
-    const filePath = 'bukti/' + fileName;
+    const fileName = `bukti_${id}_${Date.now()}.${fileExt}`;
+    const filePath = `bukti/${fileName}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('laporan-photos')
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype
-      });
+      .upload(filePath, file.buffer, { contentType: file.mimetype });
 
     if (uploadError) throw uploadError;
 
@@ -232,21 +182,14 @@ router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res
 
     const fotoUrl = publicUrlData.publicUrl;
 
-    const { error: updateError } = await supabaseAdmin
-      .from('laporan')
-      .update({ status: 'done' })
-      .eq('id', id);
+    await supabaseAdmin.from('laporan').update({ status: 'done' }).eq('id', id);
 
-    if (updateError) throw updateError;
-
-    const { error: buktiError } = await supabaseAdmin.from('bukti_selesai').insert({
+    await supabaseAdmin.from('bukti_selesai').insert({
       laporan_id: id,
       url_foto: fotoUrl,
       keterangan,
       uploaded_by: userId
     });
-
-    if (buktiError) throw buktiError;
 
     await supabaseAdmin.from('history_laporan').insert({
       laporan_id: id,
@@ -255,19 +198,10 @@ router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res
       catatan: keterangan
     });
 
-    res.json({
-      success: true,
-      message: 'Laporan berhasil diselesaikan dengan bukti',
-      fotoUrl
-    });
+    res.json({ success: true, message: 'Laporan berhasil diselesaikan dengan bukti', fotoUrl });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: 'Gagal upload bukti',
-      error: err.message
-    });
+    res.status(500).json({ success: false, message: 'Gagal upload bukti', error: err.message });
   }
 });
 
 export default router;
->>>>>>> Panji_Branch

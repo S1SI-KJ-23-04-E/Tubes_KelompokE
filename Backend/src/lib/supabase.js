@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import dotenv from 'dotenv';
-dotenv.config({ path: './.env' });
-=======
-import 'dotenv/config';
->>>>>>> Panji_Branch
 import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 
 // Admin client (service role) — bypass RLS untuk operasi backend
 export const supabaseAdmin = createClient(
