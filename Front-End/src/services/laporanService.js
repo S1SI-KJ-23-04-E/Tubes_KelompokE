@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
-
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -9,38 +7,40 @@ async function getCurrentUserId() {
   return session.user.id;
 }
 
-// Get auth token for backend API calls
-async function getAuthToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error('Anda belum login.');
-  return session.access_token;
-}
-
 export async function createLaporan(data) {
   try {
-    const token = await getAuthToken();
+    const userId = await getCurrentUserId();
     
-    const response = await fetch(`${API_URL}/laporan`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        kecamatan_id: data.kecamatan_id,
-        kelurahan_id: data.kelurahan_id,
-        deskripsi: data.deskripsi,
-        alamat: data.alamat,
-        foto_url: data.foto_url
-      })
-    });
+    const { data: result, error } = await supabase
+      .from('laporan')
+      .insert([
+        {
+          pelapor_id: userId, 
+          kecamatan_id: data.kecamatan_id,
+          kelurahan_id: data.kelurahan_id,
+          deskripsi: data.deskripsi,
+          alamat: data.alamat,
+          foto_url: data.foto_url,
+          status: 'pending'
+        }
+      ])
+      .select();
 
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Gagal membuat laporan');
+    if (error) throw error;
+    
+    // Also insert to history_laporan
+    if (result && result.length > 0) {
+      const { error: hErr } = await supabase.from('history_laporan').insert([
+        {
+          laporan_id: result[0].id,
+          status: 'pending',
+          changed_by: userId
+        }
+      ]);
+      if (hErr) console.warn('History insert warning:', hErr.message);
     }
 
-    return { success: true, data: result.data };
+    return { success: true, data: result };
   } catch (error) {
     console.error('Error creating laporan:', error);
     return { success: false, error: error.message };
@@ -49,20 +49,20 @@ export async function createLaporan(data) {
 
 export async function getLaporanByUser() {
   try {
-    const token = await getAuthToken();
+    const userId = await getCurrentUserId();
     
-    const response = await fetch(`${API_URL}/laporan/user`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan )
+      `)
+      .eq('pelapor_id', userId)
+      .order('created_at', { ascending: false });
 
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Gagal mengambil laporan');
-    }
-
-    return { success: true, data: result.data || [] };
+    if (error) throw error;
+    return { success: true, data: data || [] };
   } catch (error) {
     console.error('Error getting laporan:', error);
     return { success: false, error: error.message, data: [] };
@@ -71,63 +71,54 @@ export async function getLaporanByUser() {
 
 export async function getLaporanById(id) {
   try {
-    const response = await fetch(`${API_URL}/laporan/${id}`);
-    const result = await response.json();
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan:kecamatan_id(id,nama_kecamatan),
+        kelurahan:kelurahan_id(id,nama_kelurahan),
+        profiles:pelapor_id(id,nama),
+        kendala_laporan(*)
+      `)
+      .eq('id', id)
+      .single();
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Gagal mengambil detail laporan');
+    if (error) {
+      console.error('Query error full:', error);
+      throw error;
     }
 
-    // Backend endpoint returns data with history_laporan as 'history_laporan' 
-    // and bukti_selesai as 'bukti_selesai'.
-    // We map them to 'history' and 'bukti' for frontend compatibility.
-    const data = result.data;
+    console.log('Laporan data:', data);
+
+    // Fetch history — graceful, won't block on failure
+    let history = [];
+    const { data: hData, error: hError } = await supabase
+      .from('history_laporan')
+      .select('*')
+      .eq('laporan_id', id)
+      .order('created_at', { ascending: true });
+    if (!hError) history = hData || [];
+    else console.warn('history_laporan fetch warning:', hError.message);
+
+    // Fetch bukti_selesai — graceful
+    let bukti = null;
+    const { data: bData, error: bError } = await supabase
+      .from('bukti_selesai')
+      .select('*')
+      .eq('laporan_id', id)
+      .maybeSingle();
+    if (!bError) bukti = bData || null;
+    else console.warn('bukti_selesai fetch warning:', bError.message);
+
     return {
       success: true,
-      data: { 
-        ...data, 
-        history: data.history_laporan || [], 
-        bukti: data.bukti_selesai?.[0] || null,
-        feedback: data.feedback || []
-      }
+      data: { ...data, history, bukti }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
     return { success: false, error: error.message, data: null };
   }
 }
-
-export async function upvoteLaporan(id) {
-  try {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/laporan/${id}/upvote`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) throw new Error(result.error || 'Gagal upvote');
-    return result;
-  } catch (error) {
-    console.error('Upvote failed:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-export async function checkUserUpvoted(id) {
-  try {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/laporan/${id}/user-upvoted`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) throw new Error(result.error || 'Gagal cek upvote');
-    return result;
-  } catch (error) {
-    console.error('Check upvote failed:', error);
-    return { success: false, upvoted: false };
-  }
-}
-
 
 export async function deleteLaporan(id) {
   try {
@@ -226,14 +217,18 @@ export async function getLaporanByKecamatan(kecamatanId) {
 
 export async function getAllLaporan() {
   try {
-    const response = await fetch(`${API_URL}/laporan`);
+    const { data, error } = await supabase
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan ( id, nama_kecamatan ),
+        kelurahan ( id, nama_kelurahan ),
+        profiles ( id, nama )
+      `)
+      .order('created_at', { ascending: false });
 
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Gagal mengambil semua laporan');
-    }
-
-    return { success: true, data: result.data || [] };
+    if (error) throw error;
+    return { success: true, data: data || [] };
   } catch (error) {
     console.error('Error getting all laporan:', error);
     return { success: false, error: error.message, data: [] };
@@ -296,40 +291,18 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
-// ===============================
-// UPLOAD BUKTI (PAKAI URL)
-// ===============================
-export async function uploadBuktiURL(id, foto_url, keterangan = '') {
-  try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      throw new Error('Token otentikasi tidak tersedia. Silakan login ulang.');
-    }
-
-    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        status: 'done',
-        keterangan,
-        foto_url,
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || data.message || 'Gagal mengunggah bukti.');
-    }
-    return data;
-
-  } catch (error) {
-    console.error('Error upload bukti:', error);
-    return { success: false, error: error.message || 'Error upload bukti' };
-  }
+export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
+  return updateLaporanStatus(id, 'done', fileBukti, keterangan);
 }
+
+export async function tolakLaporan(id, keterangan = '') {
+  return updateLaporanStatus(id, 'rejected', null, keterangan);
+}
+
+export const createKendala = async (laporan_id, deskripsi) => {
+  const { data, error } = await supabase
+    .from('kendala_laporan')
+    .insert([{ laporan_id, deskripsi }]);
+
+  return { data, error };
+};
