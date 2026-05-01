@@ -75,14 +75,20 @@ export async function getLaporanById(id) {
       .from('laporan')
       .select(`
         *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
+        kecamatan:kecamatan_id(id,nama_kecamatan),
+        kelurahan:kelurahan_id(id,nama_kelurahan),
+        profiles:pelapor_id(id,nama),
+        kendala_laporan(*)
       `)
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Query error full:', error);
+      throw error;
+    }
+
+    console.log('Laporan data:', data);
 
     // Fetch history — graceful, won't block on failure
     let history = [];
@@ -292,3 +298,11 @@ export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
 export async function tolakLaporan(id, keterangan = '') {
   return updateLaporanStatus(id, 'rejected', null, keterangan);
 }
+
+export const createKendala = async (laporan_id, deskripsi) => {
+  const { data, error } = await supabase
+    .from('kendala_laporan')
+    .insert([{ laporan_id, deskripsi }]);
+
+  return { data, error };
+};
