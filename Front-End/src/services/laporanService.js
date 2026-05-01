@@ -308,33 +308,61 @@ export const createKendala = async (laporan_id, deskripsi) => {
 };
 
 // ✅ TAMBAHKAN DI SINI
+export async function checkUserUpvoted(laporanId) {
+  try {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from('upvote')
+      .select('id')
+      .eq('laporan_id', laporanId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return { success: true, upvoted: !!data };
+  } catch (error) {
+    console.error('Error checking upvote:', error);
+    return { success: false, upvoted: false };
+  }
+}
+
 export async function upvoteLaporan(laporanId) {
   try {
     const userId = await getCurrentUserId();
 
+    // 1. Cek apakah sudah upvote (gunakan tabel 'upvote' yang benar)
     const { data: existing } = await supabase
-      .from('upvote_laporan')
+      .from('upvote')
       .select('*')
       .eq('laporan_id', laporanId)
       .eq('user_id', userId)
       .maybeSingle();
 
+    // 2. Ambil data laporan untuk mendapatkan count saat ini
+    const { data: laporan } = await supabase
+      .from('laporan')
+      .select('upvote_count')
+      .eq('id', laporanId)
+      .single();
+
+    let newCount = laporan?.upvote_count || 0;
+
     if (existing) {
-      await supabase
-        .from('upvote_laporan')
-        .delete()
-        .eq('id', existing.id);
-
-      return { success: true, upvoted: false };
+      // 3a. Hapus upvote
+      await supabase.from('upvote').delete().eq('id', existing.id);
+      newCount = Math.max(0, newCount - 1);
     } else {
-      await supabase
-        .from('upvote_laporan')
-        .insert([{ laporan_id: laporanId, user_id: userId }]);
-
-      return { success: true, upvoted: true };
+      // 3b. Tambah upvote
+      await supabase.from('upvote').insert([{ laporan_id: laporanId, user_id: userId }]);
+      newCount = newCount + 1;
     }
+
+    // 4. Update upvote_count di tabel laporan
+    await supabase.from('laporan').update({ upvote_count: newCount }).eq('id', laporanId);
+
+    return { success: true, upvoted: !existing, upvote_count: newCount };
   } catch (error) {
     console.error('Error upvote:', error);
-    return { success: false };
+    return { success: false, error: error.message };
   }
-}
+}
