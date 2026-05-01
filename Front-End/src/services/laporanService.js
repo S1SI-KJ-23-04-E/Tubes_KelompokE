@@ -1,56 +1,60 @@
 import { supabase } from '../lib/supabase';
 
-// Get current user ID from LOCAL session (no network call — instant)
+// ===============================
+// GET USER ID (SAFE)
+// ===============================
 async function getCurrentUserId() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Anda belum login.');
   return session.user.id;
 }
 
+// ===============================
+// CREATE LAPORAN
+// ===============================
 export async function createLaporan(data) {
   try {
     const userId = await getCurrentUserId();
-    
+
     const { data: result, error } = await supabase
       .from('laporan')
-      .insert([
-        {
-          pelapor_id: userId, 
-          kecamatan_id: data.kecamatan_id,
-          kelurahan_id: data.kelurahan_id,
-          deskripsi: data.deskripsi,
-          alamat: data.alamat,
-          foto_url: data.foto_url,
-          status: 'pending'
-        }
-      ])
+      .insert([{
+        pelapor_id: userId,
+        kecamatan_id: data.kecamatan_id,
+        kelurahan_id: data.kelurahan_id,
+        deskripsi: data.deskripsi,
+        alamat: data.alamat,
+        foto_url: data.foto_url,
+        status: 'pending'
+      }])
       .select();
 
     if (error) throw error;
-    
-    // Also insert to history_laporan
-    if (result && result.length > 0) {
-      const { error: hErr } = await supabase.from('history_laporan').insert([
-        {
-          laporan_id: result[0].id,
-          status: 'pending',
-          changed_by: userId
-        }
-      ]);
-      if (hErr) console.warn('History insert warning:', hErr.message);
+
+    // insert history
+    if (result?.length) {
+      await supabase.from('history_laporan').insert([{
+        laporan_id: result[0].id,
+        status: 'pending',
+        changed_by: userId
+      }]);
     }
 
     return { success: true, data: result };
+
   } catch (error) {
-    console.error('Error creating laporan:', error);
+    console.error('createLaporan error:', error);
     return { success: false, error: error.message };
   }
 }
 
+// ===============================
+// GET LAPORAN USER
+// ===============================
 export async function getLaporanByUser() {
   try {
     const userId = await getCurrentUserId();
-    
+
     const { data, error } = await supabase
       .from('laporan')
       .select(`
@@ -62,13 +66,18 @@ export async function getLaporanByUser() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+
     return { success: true, data: data || [] };
+
   } catch (error) {
-    console.error('Error getting laporan:', error);
-    return { success: false, error: error.message, data: [] };
+    console.error('getLaporanByUser error:', error);
+    return { success: false, data: [] };
   }
 }
 
+// ===============================
+// GET DETAIL LAPORAN
+// ===============================
 export async function getLaporanById(id) {
   try {
     const { data, error } = await supabase
@@ -84,40 +93,42 @@ export async function getLaporanById(id) {
 
     if (error) throw error;
 
-    // Fetch history — graceful, won't block on failure
-    let history = [];
-    const { data: hData, error: hError } = await supabase
+    // history
+    const { data: history } = await supabase
       .from('history_laporan')
       .select('*')
       .eq('laporan_id', id)
       .order('created_at', { ascending: true });
-    if (!hError) history = hData || [];
-    else console.warn('history_laporan fetch warning:', hError.message);
 
-    // Fetch bukti_selesai — graceful
-    let bukti = null;
-    const { data: bData, error: bError } = await supabase
+    // bukti selesai
+    const { data: bukti } = await supabase
       .from('bukti_selesai')
       .select('*')
       .eq('laporan_id', id)
       .maybeSingle();
-    if (!bError) bukti = bData || null;
-    else console.warn('bukti_selesai fetch warning:', bError.message);
 
     return {
       success: true,
-      data: { ...data, history, bukti }
+      data: {
+        ...data,
+        history: history || [],
+        bukti: bukti || null
+      }
     };
+
   } catch (error) {
-    console.error('Error getting laporan detail:', error);
-    return { success: false, error: error.message, data: null };
+    console.error('getLaporanById error:', error);
+    return { success: false, data: null };
   }
 }
 
+// ===============================
+// DELETE LAPORAN
+// ===============================
 export async function deleteLaporan(id) {
   try {
     const userId = await getCurrentUserId();
-    
+
     const { error } = await supabase
       .from('laporan')
       .delete()
@@ -126,252 +137,166 @@ export async function deleteLaporan(id) {
       .eq('status', 'pending');
 
     if (error) throw error;
+
     return { success: true };
+
   } catch (error) {
-    console.error('Error deleting laporan:', error);
-    return { success: false, error: error.message };
+    console.error('deleteLaporan error:', error);
+    return { success: false };
   }
 }
 
-export async function getKecamatan() {
+// ===============================
+// UPDATE STATUS (ADMIN)
+// ===============================
+export async function updateLaporanStatus(id, status, fileBukti = null, catatan = '') {
   try {
-    const { data, error } = await supabase.from('kecamatan').select('*').order('nama_kecamatan');
+    const userId = await getCurrentUserId();
+
+    // update status
+    const { error } = await supabase
+      .from('laporan')
+      .update({ status })
+      .eq('id', id);
+
     if (error) throw error;
-    return data || [];
+
+    // insert history
+    await supabase.from('history_laporan').insert([{
+      laporan_id: id,
+      status,
+      changed_by: userId,
+      catatan
+    }]);
+
+    // upload bukti jika selesai
+    if (status === 'selesai' && fileBukti) {
+      const ext = fileBukti.name.split('.').pop();
+      const filePath = `bukti_${id}_${Date.now()}.${ext}`;
+
+      await supabase.storage
+        .from('laporan-photos')
+        .upload(filePath, fileBukti);
+
+      const { data: url } = supabase.storage
+        .from('laporan-photos')
+        .getPublicUrl(filePath);
+
+      await supabase.from('bukti_selesai').insert([{
+        laporan_id: id,
+        url_foto: url.publicUrl,
+        keterangan: catatan,
+        uploaded_by: userId
+      }]);
+    }
+
+    return { success: true };
+
   } catch (error) {
-    console.error('Error fetching kecamatan:', error);
-    return [];
+    console.error('updateStatus error:', error);
+    return { success: false };
   }
+}
+
+// ===============================
+// GET KECAMATAN & KELURAHAN
+// ===============================
+export async function getKecamatan() {
+  const { data } = await supabase
+    .from('kecamatan')
+    .select('*')
+    .order('nama_kecamatan');
+
+  return data || [];
 }
 
 export async function getKelurahan(kecamatanId) {
   if (!kecamatanId) return [];
-  try {
-    const { data, error } = await supabase
-      .from('kelurahan')
-      .select('*')
-      .eq('kecamatan_id', kecamatanId)
-      .order('nama_kelurahan');
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching kelurahan:', error);
-    return [];
-  }
+
+  const { data } = await supabase
+    .from('kelurahan')
+    .select('*')
+    .eq('kecamatan_id', kecamatanId)
+    .order('nama_kelurahan');
+
+  return data || [];
 }
 
+// ===============================
+// UPLOAD FOTO
+// ===============================
 export async function uploadFoto(file) {
   if (!file) return null;
+
   try {
     const userId = await getCurrentUserId();
-    
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
+    const ext = file.name.split('.').pop();
+    const filePath = `${userId}/${Date.now()}.${ext}`;
+
+    await supabase.storage
       .from('laporan-photos')
       .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
 
     const { data } = supabase.storage
       .from('laporan-photos')
       .getPublicUrl(filePath);
 
     return data.publicUrl;
+
   } catch (error) {
-    console.error('Error uploading photo:', error);
+    console.error('uploadFoto error:', error);
     return null;
-  }
-}
-
-// --- ADMIN FUNCTIONS ---
-
-export async function getLaporanByKecamatan(kecamatanId) {
-  try {
-    const { data, error } = await supabase
-      .from('laporan')
-      .select(`
-        *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
-      `)
-      .eq('kecamatan_id', kecamatanId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return { success: true, data: data || [] };
-  } catch (error) {
-    console.error('Error getting laporan by kecamatan:', error);
-    return { success: false, error: error.message, data: [] };
-  }
-}
-
-export async function getAllLaporan() {
-  try {
-    const { data, error } = await supabase
-      .from('laporan')
-      .select(`
-        *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return { success: true, data: data || [] };
-  } catch (error) {
-    console.error('Error getting all laporan:', error);
-    return { success: false, error: error.message, data: [] };
-  }
-}
-
-export async function updateLaporanStatus(id, newStatus, fileBukti = null, keterangan = '') {
-  try {
-    const userId = await getCurrentUserId();
-    
-    // 1. Update status in laporan table
-    const { error: updateError } = await supabase
-      .from('laporan')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (updateError) throw updateError;
-
-    // 2. Insert into history_laporan
-    const { error: historyErr } = await supabase.from('history_laporan').insert([
-      {
-        laporan_id: id,
-        status: newStatus,
-        changed_by: userId,
-        catatan: keterangan
-      }
-    ]);
-    if (historyErr) console.warn('History insert warning:', historyErr.message);
-
-    // 3. Handle bukti selesai if status is 'selesai' and a file is provided
-    if (newStatus === 'selesai' && fileBukti) {
-      const fileExt = fileBukti.name.split('.').pop();
-      const fileName = `bukti_${id}_${Math.random()}.${fileExt}`;
-      const filePath = `bukti/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('laporan-photos')
-        .upload(filePath, fileBukti);
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase.storage
-        .from('laporan-photos')
-        .getPublicUrl(filePath);
-
-      await supabase.from('bukti_selesai').insert([
-        {
-          laporan_id: id,
-          url_foto: publicUrlData.publicUrl,
-          keterangan: keterangan,
-          uploaded_by: userId
-        }
-      ]);
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating status:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// ===============================
-// UPLOAD BUKTI (PAKAI URL)
-// ===============================
-export async function uploadBuktiURL(id, foto_url, keterangan = '') {
-  try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) {
-      throw new Error('Token otentikasi tidak tersedia. Silakan login ulang.');
-    }
-
-    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        status: 'done',
-        keterangan,
-        foto_url,
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || data.message || 'Gagal mengunggah bukti.');
-    }
-    return data;
-
-  } catch (error) {
-    console.error('Error upload bukti:', error);
-    return { success: false, error: error.message || 'Error upload bukti' };
-  }
-}
-
-// ===============================
-// TAMBAH INFORMASI ADMIN (DEV-63)
-// ===============================
-export async function tambahInformasi(id, catatan) {
-  try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    if (!token) throw new Error("Belum login");
-
-    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/informasi`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ catatan }),
-    });
-
-    return await res.json();
-
-  } catch (err) {
-    console.error("Error tambah informasi:", err);
-    return { success: false };
   }
 }
 
 // ===============================
 // GET INFORMASI ADMIN
 // ===============================
-export async function getInformasi(id) {
+export async function getInformasi(laporanId) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    const { data, error } = await supabase
+      .from('informasi_laporan') // pastikan nama tabel ini sesuai di DB kamu
+      .select(`
+        id,
+        catatan,
+        created_at,
+        profiles ( nama )
+      `)
+      .eq('laporan_id', laporanId)
+      .order('created_at', { ascending: false });
 
-    if (!token) throw new Error("Belum login");
+    if (error) throw error;
 
-    const res = await fetch(`${API_BASE_URL}/admin/laporan/${id}/informasi`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    return { success: true, data: data || [] };
 
-    return await res.json();
+  } catch (error) {
+    console.error('getInformasi error:', error);
+    return { success: false, data: [] };
+  }
+}
 
-  } catch (err) {
-    console.error("Error get informasi:", err);
+// ===============================
+// TAMBAH INFORMASI ADMIN
+// ===============================
+export async function tambahInformasi(laporanId, catatan) {
+  try {
+    const userId = await getCurrentUserId();
+
+    const { error } = await supabase
+      .from('informasi_laporan') // pastikan nama tabel ini sama
+      .insert([{
+        laporan_id: laporanId,
+        catatan: catatan,
+        created_by: userId
+      }]);
+
+    if (error) throw error;
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('tambahInformasi error:', error);
     return { success: false };
   }
 }

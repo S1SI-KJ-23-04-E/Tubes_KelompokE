@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useState } from "react";
-import UploadBuktiModal from "./UploadBukti";
+
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',

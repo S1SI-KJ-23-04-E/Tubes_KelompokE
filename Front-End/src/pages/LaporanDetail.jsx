@@ -1,25 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getLaporanById, upvoteLaporan, checkUserUpvoted, updateLaporanStatus } from '../services/laporanService';
+import { getLaporanById, updateLaporanStatus } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import { ArrowLeft, Clock, MapPin } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import InformasiAdmin from "../components/InformasiAdmin";
 
 export default function LaporanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [upvoted, setUpvoted] = useState(false);
-  const [upvoteLoading, setUpvoteLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan';
-  const isPetugas = profile?.role === 'petugas';
   const isOwner = profile?.id === data?.pelapor_id;
 
   useEffect(() => {
@@ -28,14 +24,11 @@ export default function LaporanDetail() {
 
   const loadData = async () => {
     setLoading(true);
+
     const result = await getLaporanById(id);
 
     if (result.success) {
       setData(result.data);
-      if (user) {
-        const uvRes = await checkUserUpvoted(id);
-        if (uvRes.success) setUpvoted(uvRes.upvoted);
-      }
     } else {
       alert('Laporan tidak ditemukan');
       navigate('/laporan');
@@ -44,31 +37,23 @@ export default function LaporanDetail() {
     setLoading(false);
   };
 
-  const handleUpvote = async () => {
-    if (upvoteLoading || !user) return;
-
-    setUpvoteLoading(true);
-    const res = await upvoteLaporan(id);
-
-    if (res.success) {
-      setUpvoted(res.upvoted);
-      setData(prev => ({ ...prev, upvote_count: res.upvote_count }));
-    }
-
-    setUpvoteLoading(false);
-  };
-
   const handleUpdateStatus = async (status) => {
     const ket = window.prompt(`Update status ke ${status}? Catatan (opsional):`);
     if (ket === null) return;
 
     setActionLoading(true);
+
     const { success } = await updateLaporanStatus(id, status, null, ket);
+
     if (success) loadData();
+
     setActionLoading(false);
   };
 
-  if (loading) return <div className="text-center mt-10">Loading...</div>;
+  if (loading) {
+    return <div className="text-center mt-10">Loading...</div>;
+  }
+
   if (!data) return null;
 
   return (
@@ -130,6 +115,7 @@ export default function LaporanDetail() {
           <button
             onClick={() => handleUpdateStatus('verified')}
             className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+            disabled={actionLoading}
           >
             Verifikasi
           </button>
@@ -137,29 +123,21 @@ export default function LaporanDetail() {
           <button
             onClick={() => handleUpdateStatus('rejected')}
             className="bg-red-500 text-white px-4 py-2 rounded"
+            disabled={actionLoading}
           >
             Tolak
           </button>
         </div>
       )}
 
-      {/* UPVOTE */}
-      <div className="mb-6">
-        <button
-          onClick={handleUpvote}
-          disabled={upvoteLoading || !user}
-          className="bg-indigo-500 text-white px-4 py-2 rounded"
-        >
-          👍 {data.upvote_count || 0}
-        </button>
-      </div>
-
       {/* FEEDBACK */}
       {(data.status === 'selesai' || data.status === 'done') && (
         isOwner ? (
           <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
         ) : (
-          <p className="text-gray-500">Hanya pelapor yang bisa memberi feedback</p>
+          <p className="text-gray-500">
+            Hanya pelapor yang bisa memberi feedback
+          </p>
         )
       )}
 
