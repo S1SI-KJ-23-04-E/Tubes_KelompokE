@@ -4,6 +4,33 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
+// GET /api/admin/laporan/all — Semua laporan (super admin)
+router.get('/laporan/all', authenticate, async (req, res) => {
+  const { search } = req.query;
+
+  let query = supabaseAdmin
+    .from('laporan')
+    .select(`*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), profiles:pelapor_id(id, nama)`);
+
+  if (search) {
+    query = query.or(`deskripsi.ilike.%${search}%,alamat.ilike.%${search}%`);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ success: false, error: error.message, data: [] });
+
+  const priorityWeight = { high: 3, normal: 2, low: 1 };
+  const sortedData = [...data].sort((a, b) => {
+    const weightA = priorityWeight[a.prioritas?.toLowerCase()] || 2;
+    const weightB = priorityWeight[b.prioritas?.toLowerCase()] || 2;
+    if (weightB !== weightA) return weightB - weightA;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  res.json({ success: true, data: sortedData });
+});
+
 // GET /api/admin/laporan/kecamatan/:kecamatanId
 router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => {
   const { search } = req.query;
