@@ -1,43 +1,117 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getLaporanById, updateLaporanStatus } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import { ArrowLeft, Clock, MapPin, CheckCircle2, Upload, AlertCircle } from 'lucide-react';
+import { createKendala } from '../services/kendalaService';
+import { supabase } from '../lib/supabase';
+import InformasiAdmin from "../components/InformasiAdmin";
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
   verified: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-orange-100 text-orange-800',
-  done: 'bg-green-100 text-green-800',
   selesai: 'bg-green-100 text-green-800',
-  diproses: 'bg-orange-100 text-orange-800',
   rejected: 'bg-red-100 text-red-800'
 };
+
+// Helper function untuk format waktu real-time
+function formatTimeAgo(dateString) {
+  if (!dateString) return '-';
+  
+  // Parse dengan ISO string format dari Supabase
+  const date = new Date(dateString);
+  
+  // Check jika date invalid
+  if (isNaN(date.getTime())) {
+    return dateString; // return original jika invalid
+  }
+  
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Baru saja';
+  if (diffMins < 60) return `${diffMins} menit lalu`;
+  if (diffHours < 24) return `${diffHours} jam lalu`;
+  if (diffDays < 7) return `${diffDays} hari lalu`;
+  
+  // Format: DD/MM/YYYY, HH:MM (using local timezone)
+  return date.toLocaleString('id-ID', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
 
 export default function LaporanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const isOwner = profile?.id === data?.pelapor_id;
   
   // Admin Action State
+  const [refreshKey, setRefreshKey] = useState(0); // untuk trigger re-render waktu
   const [newStatus, setNewStatus] = useState('');
   const [catatan, setCatatan] = useState('');
   const [buktiFile, setBuktiFile] = useState(null);
   const [buktiPreview, setBuktiPreview] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [kendala, setKendala] = useState('');
+  const [loadingKendala, setLoadingKendala] = useState(false);
+  const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan';
+  const isPetugas = profile?.role === 'petugas';
 
   useEffect(() => {
     loadData();
   }, [id]);
 
+  // Setup realtime subscription untuk kendala dan history
+  useEffect(() => {
+    if (!id) return;
+
+    // Subscribe to kendala_laporan changes
+    const kendalaSubscription = supabase
+      .channel(`kendala:laporan_id=eq.${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'kendala_laporan',
+          filter: `laporan_id=eq.${id}`
+        },
+        () => {
+          // Reload data ketika ada perubahan
+          loadData();
+        }
+      )
+      .subscribe();
+
+    // Refresh setiap menit untuk update waktu relatif (e.g., "2 menit lalu" -> "3 menit lalu")
+    const timer = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 60000); // 1 menit
+
+    return () => {
+      kendalaSubscription.unsubscribe();
+      clearInterval(timer);
+    };
+  }, [id]);
+
   const loadData = async () => {
     setLoading(true);
     const result = await getLaporanById(id);
+
     if (result.success) {
       setData(result.data);
       setNewStatus(result.data.status);
@@ -45,6 +119,7 @@ export default function LaporanDetail() {
       alert('Laporan tidak ditemukan');
       navigate('/laporan');
     }
+
     setLoading(false);
   };
 
@@ -56,135 +131,229 @@ export default function LaporanDetail() {
     }
   };
 
+  const handleKirimKendala = async () => {
+    if (!kendala.trim()) {
+      alert('Kendala tidak boleh kosong');
+      return;
+    }
+
+    setLoadingKendala(true);
+
+    const { success, error } = await createKendala(data.id, kendala);
+
+    setLoadingKendala(false);
+
+    if (success) {
+      setKendala('');
+      alert('Kendala berhasil dikirim');
+      loadData();
+    } else {
+      alert('Gagal kirim kendala: ' + error);
+    }
+  };
+
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
+
     if (newStatus === 'selesai' && !buktiFile && data.status !== 'selesai') {
       alert('Foto bukti selesai wajib diunggah!');
       return;
     }
-    
     setActionLoading(true);
-    const { success, error } = await updateLaporanStatus(id, newStatus, buktiFile, catatan);
+
+    const { success, error } = await updateLaporanStatus(
+      id,
+      newStatus,
+      buktiFile,
+      catatan
+    );
+
     setActionLoading(false);
-    
+
     if (success) {
       setCatatan('');
       setBuktiFile(null);
       setBuktiPreview('');
       loadData();
     } else {
-      alert('Gagal memperbarui status: ' + error);
+      alert('Gagal update: ' + error);
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center p-24">
-      <div className="animate-spin rounded-full h-14 w-14 border-b-2 border-indigo-600"></div>
-    </div>
-  );
-  if (!data) return null;
+  if (loading) {
+    return (
+      <div className="flex justify-center p-24">
+        <div className="animate-spin h-12 w-12 border-b-2 border-indigo-600 rounded-full"></div>
+      </div>
+    );
+  }
 
-  const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
+  if (!data) return null;
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
-      <button onClick={() => navigate(-1)} className="flex items-center text-slate-500 hover:text-indigo-600 font-bold mb-8 transition-colors">
-        <ArrowLeft size={20} className="mr-2" />
-        Kembali ke Daftar
+
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center mb-6 text-slate-500 hover:text-indigo-600"
+      >
+        <ArrowLeft size={18} className="mr-2" />
+        Kembali
       </button>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-        <div className="p-8 md:p-10 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start gap-4">
-          <div>
-            <span className={`text-xs font-black px-4 py-1.5 rounded-full inline-block mb-4 tracking-wider ${statusColors[data.status] || 'bg-gray-100'}`}>
-              {data.status.replace('_', ' ').toUpperCase()}
-            </span>
-            <h1 className="text-3xl font-extrabold text-slate-900 mb-3 leading-tight">Detail Laporan</h1>
-            <p className="text-slate-500 flex items-center font-medium mb-1">
-              <Clock size={18} className="mr-2" />
-              Dilaporkan: {new Date(data.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
-            </p>
-            {isAdmin && data.profiles && (
-              <p className="text-slate-500 flex items-center font-medium mt-2 bg-indigo-50 px-3 py-1 rounded-lg w-max text-indigo-700">
-                Pelapor: {data.profiles.nama}
-              </p>
-            )}
-          </div>
-          <div className="bg-slate-50 px-6 py-4 rounded-2xl text-center border border-slate-200 shadow-sm min-w-[120px]">
-            <span className="block text-3xl mb-2 drop-shadow-sm">👍</span>
-            <span className="font-extrabold text-slate-800 text-xl">{data.upvote_count || 0}</span>
-            <span className="block text-xs text-slate-500 font-bold uppercase mt-1">Upvotes</span>
-          </div>
-        </div>
+      {/* DETAIL */}
+      <div className="bg-white rounded-2xl shadow p-6 mb-6">
 
-        <div className="p-8 md:p-10">
-          <h3 className="font-bold text-slate-900 mb-4 text-xl">Deskripsi Kejadian</h3>
-          <p className="text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-8 whitespace-pre-wrap leading-relaxed text-lg">
-            {data.deskripsi}
+        <span className={`text-xs px-3 py-1 rounded-full ${statusColors[data.status]}`}>
+          {data.status}
+        </span>
+
+        <h1 className="text-2xl font-bold mt-3 mb-2">Detail Laporan</h1>
+
+        <p className="text-sm text-gray-500 flex items-center">
+          <Clock size={14} className="mr-1" />
+          {new Date(data.created_at).toLocaleString()}
+        </p>
+
+        {isAdmin && data.profiles && (
+          <p className="text-sm mt-2 text-indigo-600">
+            Pelapor: {data.profiles.nama}
           </p>
+        )}
 
-          <h3 className="font-bold text-slate-900 mb-4 text-xl flex items-center">
-            <MapPin size={24} className="mr-2 text-indigo-500" /> Lokasi Laporan
-          </h3>
-          <div className="text-slate-700 mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-            <p className="text-lg font-medium mb-1">{data.alamat}</p>
-            <span className="text-slate-500">
-              Kelurahan {data.kelurahan?.nama_kelurahan}, Kecamatan {data.kecamatan?.nama_kecamatan}
-            </span>
-          </div>
-
-          {data.foto_url && (
-            <div className="mb-4">
-              <h3 className="font-bold text-slate-900 mb-4 text-xl">Bukti Foto Kerusakan</h3>
-              <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-sm">
-                <img src={data.foto_url} alt="Foto laporan" className="w-full max-h-[500px] object-cover hover:scale-105 transition-transform duration-500" />
-              </div>
-            </div>
-          )}
+        <div className="mt-4">
+          <p className="font-semibold mb-2">Deskripsi</p>
+          <p className="bg-gray-50 p-3 rounded">{data.deskripsi}</p>
         </div>
+
+        <InformasiAdmin laporanId={data.id} />
+
+        <div className="mt-4">
+          <p className="font-semibold flex items-center mb-2">
+            <MapPin size={16} className="mr-1" /> Lokasi
+          </p>
+          <p>{data.alamat}</p>
+        </div>
+
+        {data.foto_url && (
+          <img
+            src={data.foto_url}
+            alt="laporan"
+            className="mt-4 rounded-lg"
+          />
+        )}
       </div>
 
-      {/* --- ADMIN ACTION PANEL REMOVED: Status updates are now handled in the dashboard --- */}
+      {/* ADMIN PANEL */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl shadow p-6 mb-6">
+          <h2 className="font-bold mb-4">Aksi Admin</h2>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">
-        <h3 className="text-2xl font-extrabold text-slate-900 mb-8">Riwayat Penanganan</h3>
-        <div className="space-y-8">
-          {data.history?.map((h, i) => (
-            <div key={h.id} className="flex relative">
-              {i !== data.history.length - 1 && (
-                <div className="absolute top-10 left-5 bottom-[-2rem] w-0.5 bg-indigo-100 -ml-[1px] z-0"></div>
-              )}
-              <div className="relative z-10 w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 border-4 border-white shadow-sm">
-                <CheckCircle2 size={20} />
-              </div>
-              <div className="ml-5 pb-2">
-                <p className="font-bold text-slate-800 text-lg">{h.status.replace('_', ' ').toUpperCase()}</p>
-                <p className="text-sm font-medium text-slate-400 mt-1">{new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</p>
-                {h.catatan && (
-                  <p className="text-md mt-3 text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    "{h.catatan}"
-                  </p>
+          <form onSubmit={handleUpdateStatus} className="space-y-4">
+
+            <select
+              className="w-full border p-2 rounded"
+              value={newStatus || 'pending'}
+              onChange={(e) => setNewStatus(e.target.value)}
+            >
+              <option value="pending">Pending</option>
+              <option value="verified">Verified</option>
+              <option value="in_progress">Diproses</option>
+              <option value="selesai">Selesai</option>
+              <option value="rejected">Tolak</option>
+            </select>
+
+            <textarea
+              className="w-full border p-2 rounded"
+              rows={3}
+              placeholder="Catatan..."
+              value={catatan}
+              onChange={(e) => setCatatan(e.target.value)}
+            />
+
+            {newStatus === 'selesai' && (
+              <div>
+                <input type="file" onChange={handleBuktiChange} />
+
+                {buktiPreview && (
+                  <img
+                    src={buktiPreview}
+                    className="mt-2 max-h-40 rounded"
+                  />
                 )}
               </div>
-            </div>
-          ))}
-          {(!data.history || data.history.length === 0) && (
-            <p className="text-slate-500 italic">Belum ada riwayat penanganan.</p>
-          )}
-        </div>
-      </div>
+            )}
 
-      {(data.status === 'selesai' || data.status === 'done') && data.bukti && (
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl shadow-sm border border-green-100 p-8 md:p-10 mb-8">
-          <h3 className="text-2xl font-extrabold text-green-800 mb-4 flex items-center">
-            <CheckCircle2 size={28} className="mr-3" /> Laporan Telah Diselesaikan
-          </h3>
-          <p className="text-green-700 text-lg mb-6">{data.bukti.keterangan || 'Infrastruktur telah selesai diperbaiki.'}</p>
-          <div className="rounded-3xl overflow-hidden shadow-sm border border-green-200">
-            <img src={data.bukti.url_foto} alt="Bukti penyelesaian" className="w-full max-h-[400px] object-cover" />
-          </div>
+            <button
+              disabled={actionLoading}
+              className="bg-indigo-600 text-white px-4 py-2 rounded w-full"
+            >
+              {actionLoading ? 'Loading...' : 'Simpan'}
+            </button>
+
+          </form>
         </div>
       )}
+
+{/* PETUGAS - KENDALA */}
+{isPetugas && (
+  <div className="bg-white rounded-2xl shadow p-6 mb-6">
+    <h2 className="font-bold mb-4">Laporkan Kendala</h2>
+
+    <textarea
+      className="w-full border p-2 rounded mb-3"
+      rows={3}
+      placeholder="Tulis kendala atau alasan keterlambatan..."
+      value={kendala}
+      onChange={(e) => setKendala(e.target.value)}
+    />
+
+    <button
+      disabled={loadingKendala}
+      onClick={handleKirimKendala}
+      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded w-full"
+    >
+      {loadingKendala ? 'Mengirim...' : 'Kirim Kendala'}
+    </button>
+  </div>
+)}
+
+{/* KENDALA PETUGAS (ADMIN VIEW) */}
+{isAdmin && data.kendala_laporan?.length > 0 && (
+  <div className="bg-white rounded-2xl shadow p-6 mb-6">
+    <h2 className="font-bold mb-4 text-red-600">Kendala dari Petugas</h2>
+
+    {data.kendala_laporan.map((k) => (
+      <div key={k.id} className="mb-3 border-b pb-2">
+        <p className="text-sm">{k.deskripsi}</p>
+        <p className="text-xs text-gray-500">
+          {formatTimeAgo(k.created_at)}
+        </p>
+      </div>
+    ))}
+  </div>
+)}
+      {/* HISTORY */}
+      <div className="bg-white rounded-2xl shadow p-6 mb-6">
+        <h2 className="font-bold mb-4">Riwayat</h2>
+
+        {data.history?.map((h) => (
+          <div key={h.id} className="mb-3 border-b pb-2">
+            <p className="font-semibold">{h.status}</p>
+            <p className="text-sm text-gray-500">
+              {formatTimeAgo(h.created_at)}
+            </p>
+            {h.catatan && <p className="text-sm">{h.catatan}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* FEEDBACK */}
+      {data.status === 'selesai' && (
+        <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
+      )}
+
 
       {data.feedback?.length > 0 ? (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-10 mb-8">

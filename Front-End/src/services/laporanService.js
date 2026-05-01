@@ -75,15 +75,20 @@ export async function getLaporanById(id) {
       .from('laporan')
       .select(`
         *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama ),
-        feedback ( id, rating, ulasan, user_id, created_at )
+        kecamatan:kecamatan_id(id,nama_kecamatan),
+        kelurahan:kelurahan_id(id,nama_kelurahan),
+        profiles:pelapor_id(id,nama),
+        kendala_laporan(*)
       `)
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Query error full:', error);
+      throw error;
+    }
+
+    console.log('Laporan data:', data);
 
     // Fetch history — graceful, won't block on failure
     let history = [];
@@ -105,18 +110,9 @@ export async function getLaporanById(id) {
     if (!bError) bukti = bData || null;
     else console.warn('bukti_selesai fetch warning:', bError.message);
 
-    // Fetch feedback separately to avoid relation mapping issues
-    let feedback = [];
-    const { data: fData, error: fError } = await supabase
-      .from('feedback')
-      .select('id, rating, ulasan, user_id, created_at')
-      .eq('laporan_id', id);
-    if (!fError) feedback = fData || [];
-    else console.warn('feedback fetch warning:', fError.message);
-
     return {
       success: true,
-      data: { ...data, history, bukti, feedback }
+      data: { ...data, history, bukti }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
@@ -302,3 +298,11 @@ export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
 export async function tolakLaporan(id, keterangan = '') {
   return updateLaporanStatus(id, 'rejected', null, keterangan);
 }
+
+export const createKendala = async (laporan_id, deskripsi) => {
+  const { data, error } = await supabase
+    .from('kendala_laporan')
+    .insert([{ laporan_id, deskripsi }]);
+
+  return { data, error };
+};

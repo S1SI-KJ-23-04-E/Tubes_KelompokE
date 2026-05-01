@@ -3,27 +3,15 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function FeedbackForm({ laporanId, onSubmitted }) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [ulasan, setUlasan] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const isWarga = profile?.role === 'warga';
-
-  if (!isWarga) {
-    return null;
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) return alert('Pilih rating 1-5');
     if (!user) return alert('Anda harus login untuk mengirim feedback.');
-
-    if (!isWarga) {
-      alert('Hanya warga yang dapat memberikan feedback.');
-      setLoading(false);
-      return;
-    }
 
     setLoading(true);
     try {
@@ -72,6 +60,7 @@ export default function FeedbackForm({ laporanId, onSubmitted }) {
           value={ulasan}
           onChange={e => setUlasan(e.target.value)}
         />
+        
         <button 
           disabled={loading}
           type="submit"
