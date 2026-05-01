@@ -48,12 +48,12 @@ router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => 
 
   if (error) return res.status(500).json({ success: false, error: error.message, data: [] });
 
-  // LOGIKA SORTING PRIORITAS (High > Normal > Low)
-  const priorityWeight = { high: 3, normal: 2, low: 1 };
+  // LOGIKA SORTING PRIORITAS (High > Low)
+  const priorityWeight = { high: 3, low: 1 };
   
   const sortedData = [...data].sort((a, b) => {
-    const weightA = priorityWeight[a.prioritas?.toLowerCase()] || 2;
-    const weightB = priorityWeight[b.prioritas?.toLowerCase()] || 2;
+    const weightA = priorityWeight[(a.prioritas || 'low').toLowerCase()] || 1;
+    const weightB = priorityWeight[(b.prioritas || 'low').toLowerCase()] || 1;
     
     if (weightB !== weightA) {
       return weightB - weightA; // Prioritas lebih tinggi di atas
@@ -109,4 +109,39 @@ router.put('/laporan/:id/status', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
+<<<<<<< HEAD
+=======
+// GET /api/admin/laporan/semua
+router.get('/laporan/semua', authenticate, async (req, res) => {
+  const { search } = req.query;
+  
+  let query = supabaseAdmin
+    .from('laporan')
+    .select(`*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), profiles:pelapor_id(id, nama)`);
+
+  if (search) {
+    query = query.or(`deskripsi.ilike.%${search}%,alamat.ilike.%${search}%`);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ success: false, error: error.message, data: [] });
+
+  // LOGIKA SORTING PRIORITAS (High > Low)
+  const priorityWeight = { high: 3, low: 1 };
+  
+  const sortedData = [...data].sort((a, b) => {
+    const weightA = priorityWeight[(a.prioritas || 'low').toLowerCase()] || 1;
+    const weightB = priorityWeight[(b.prioritas || 'low').toLowerCase()] || 1;
+    
+    if (weightB !== weightA) {
+      return weightB - weightA;
+    }
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  res.json({ success: true, data: sortedData });
+});
+
+>>>>>>> Panji_Branch
 export default router;
