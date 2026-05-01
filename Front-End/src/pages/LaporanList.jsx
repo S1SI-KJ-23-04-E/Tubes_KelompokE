@@ -51,6 +51,33 @@ export default function LaporanList() {
     if (authLoading || initialLoadDoneRef.current) return;
     initialLoadDoneRef.current = true;
     loadData();
+    
+    // Untuk warga biasa: setup realtime listener + polling fallback
+    if (!isAdmin && user) {
+      // Realtime listener
+      const subscription = supabase
+        .channel('laporan_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'laporan'
+        }, (payload) => {
+          console.log('Laporan changed (realtime):', payload);
+          loadData();
+        })
+        .subscribe();
+      
+      // Polling fallback - refresh setiap 30 detik
+      const pollInterval = setInterval(() => {
+        console.log('Polling laporan...');
+        loadData();
+      }, 30000);
+      
+      return () => {
+        subscription.unsubscribe();
+        clearInterval(pollInterval);
+      };
+    }
   }, [authLoading]);
 
   // Re-fetch when search query changes (debounced) or tab changes
@@ -63,23 +90,51 @@ export default function LaporanList() {
   }, [searchQuery, activeTab]);
 
   const loadData = async () => {
-    if (laporanMasuk.length === 0) setLoading(true);
+    setLoading(true);
     try {
-      if (isAdmin && profile?.kecamatan_id) {
+      const kecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
+      if (isAdmin) {
+        console.log('Admin loading - role:', profile?.role, 'kecamatanId:', kecamatanId, 'activeTab:', activeTab);
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`${API_URL}/admin/laporan/kecamatan/${profile.kecamatan_id}?search=${searchQuery}`, {
+        
+        // Tentukan endpoint berdasarkan tab
+        let endpoint;
+        if (activeTab === 'semua' || !kecamatanId) {
+          // Tab "Semua Laporan" atau jika tidak punya kecamatan_id
+          endpoint = `${API_URL}/admin/laporan/semua?search=${searchQuery}`;
+        } else {
+          // Tab "Laporan Masuk" 
+          endpoint = `${API_URL}/admin/laporan/kecamatan/${kecamatanId}?search=${searchQuery}`;
+        }
+        
+        const res = await fetch(endpoint, {
           headers: { 'Authorization': `Bearer ${session?.access_token}` }
         });
         const json = await res.json();
+        console.log('Admin laporan response:', json);
         if (json.success) setLaporanMasuk(json.data || []);
-      } 
-      const feedRes = await getAllLaporan();
-      if (feedRes.success) setLaporanPublik(feedRes.data?.filter(i => i.pelapor_id !== user?.id) || []);
-      if (user) {
-        const myRes = await getLaporanByUser();
-        if (myRes.success) setLaporanSaya(myRes.data || []);
+      } else {
+        // Load laporan publik and laporan saya (if logged-in) and filter robustly
+        const feedRes = await getAllLaporan();
+        console.debug('DEBUG feedRes count:', (feedRes.data || []).length, 'success:', feedRes.success);
+        console.debug('DEBUG current user id:', user?.id);
+
+        // Log sample pelapor_id values to help diagnose
+        if (feedRes.success && Array.isArray(feedRes.data)) {
+          console.debug('DEBUG sample pelapor_ids:', feedRes.data.slice(0,8).map(i => ({ id: i.id, pelapor_id: i.pelapor_id, profiles_id: i.profiles?.id, t: typeof i.pelapor_id })));
+        }
+
+        // Show all laporan in publik (including those created by warga, including current user)
+        setLaporanPublik(feedRes.data || []);
+
+        // Still load user's history separately
+        if (user) {
+          const myRes = await getLaporanByUser();
+          console.debug('DEBUG myRes count:', (myRes.data || []).length, 'success:', myRes.success);
+          if (myRes.success) setLaporanSaya(myRes.data || []);
+        }
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('loadData error:', err); }
     setLoading(false);
   };
 

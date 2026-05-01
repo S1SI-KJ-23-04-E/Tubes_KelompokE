@@ -1,34 +1,28 @@
-import 'dotenv/config';
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
-
-import wilayahRoutes from './routes/wilayah.js';
-import laporanRoutes from './routes/laporan.js';
-import adminRoutes from './routes/admin.js';
+import 'dotenv/config';
+import laporanRouter from './routes/laporan.js';
+import wilayahRouter from './routes/wilayah.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 7777;
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'] }));
+app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api', wilayahRoutes);
-app.use('/api/laporan', laporanRoutes);
-app.use('/api/admin', adminRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
-
-const server = app.listen(PORT, () => {
-  console.log(`✅ Express server running on http://localhost:${PORT}`);
+app.get('/', (req, res) => {
+  res.json({ success: true, message: 'Backend berjalan' });
 });
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} sudah dipakai proses lain.`);
-    console.error(`   Jalankan perintah ini untuk membebaskan port:`);
-    console.error(`   Get-NetTCPConnection -LocalPort ${PORT} -State Listen | Select-Object -ExpandProperty OwningProcess | ForEach-Object { taskkill /PID $_ /F }`);
-    process.exit(1);
-  }
+app.use('/api/laporan', laporanRouter);
+app.use('/api', wilayahRouter);
+app.use('/api/admin', adminRouter);
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: 'Endpoint tidak ditemukan' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server started on http://localhost:${PORT}`);
 });

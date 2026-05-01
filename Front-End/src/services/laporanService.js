@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+﻿import { supabase } from '../lib/supabase';
 
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
@@ -209,9 +209,9 @@ export async function getLaporanByKecamatan(kecamatanId) {
   }
 }
 
-export async function getAllLaporan() {
+export async function getAllLaporan(excludeUserId = null) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('laporan')
       .select(`
         *,
@@ -220,6 +220,13 @@ export async function getAllLaporan() {
         profiles ( id, nama )
       `)
       .order('created_at', { ascending: false });
+
+    // If caller provides an excludeUserId, filter out reports from that user at the query level
+    if (excludeUserId) {
+      query = query.neq('pelapor_id', excludeUserId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return { success: true, data: data || [] };
@@ -283,12 +290,4 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     console.error('Error updating status:', error);
     return { success: false, error: error.message };
   }
-}
-
-export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
-  return updateLaporanStatus(id, 'done', fileBukti, keterangan);
-}
-
-export async function tolakLaporan(id, keterangan = '') {
-  return updateLaporanStatus(id, 'rejected', null, keterangan);
 }

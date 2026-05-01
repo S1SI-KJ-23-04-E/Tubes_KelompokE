@@ -123,12 +123,13 @@ export default function LaporanForm() {
           <div className="mb-8 border-b border-slate-100 pb-6">
             <h1 className="text-2xl font-bold text-[#1e3a8a] mb-2">Formulir Laporan Kerusakan</h1>
             <p className="text-slate-500 text-sm">Lengkapi informasi berikut untuk membuat laporan kerusakan infrastruktur</p>
+            <p className="text-xs text-slate-500 mt-2">Field dengan tanda <span className="text-red-500">*</span> wajib diisi.</p>
           </div>
 
           <div className="space-y-6">
             {/* Alamat */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Alamat Lokasi</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Alamat Lokasi <span className="text-red-500">*</span></label>
               <input 
                 type="text" 
                 required
@@ -142,7 +143,7 @@ export default function LaporanForm() {
             {/* Kecamatan & Kelurahan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Kecamatan</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Kecamatan <span className="text-red-500">*</span></label>
                 <Select 
                   options={kecamatans}
                   placeholder="Pilih Kecamatan"
@@ -156,7 +157,7 @@ export default function LaporanForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Kelurahan</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Kelurahan <span className="text-red-500">*</span></label>
                 <Select 
                   options={kelurahans}
                   placeholder="Pilih Kelurahan Dulu"
@@ -173,7 +174,7 @@ export default function LaporanForm() {
 
             {/* Deskripsi */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan <span className="text-red-500">*</span></label>
               <textarea 
                 required
                 maxLength={500}
