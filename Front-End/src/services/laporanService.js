@@ -300,11 +300,22 @@ export async function tolakLaporan(id, keterangan = '') {
 }
 
 export const createKendala = async (laporan_id, deskripsi) => {
-  const { data, error } = await supabase
-    .from('kendala_laporan')
-    .insert([{ laporan_id, deskripsi }]);
+  try {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from('kendala_laporan')
+      .insert([{ 
+        laporan_id, 
+        deskripsi: deskripsi,
+        petugas_id: userId
+      }]);
 
-  return { data, error };
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error creating kendala:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 // ✅ TAMBAHKAN DI SINI

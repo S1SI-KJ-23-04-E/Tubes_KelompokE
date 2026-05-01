@@ -109,4 +109,24 @@ router.put('/laporan/:id/status', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
+// POST /api/admin/laporan/:id/kendala
+router.post('/laporan/:id/kendala', authenticate, async (req, res) => {
+  const { deskripsi } = req.body;
+  const userId = req.user.id;
+  const laporanId = req.params.id;
+
+  const { error } = await supabaseAdmin
+    .from('kendala_laporan')
+    .insert({
+      laporan_id: laporanId,
+      petugas_id: userId,
+      deskripsi: deskripsi,
+      created_at: new Date().toISOString()
+    });
+
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true });
+});
+
+
 export default router;

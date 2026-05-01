@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getLaporanById, upvoteLaporan, updateLaporanStatus, checkUserUpvoted } from '../services/laporanService';
+import { getLaporanById, upvoteLaporan, updateLaporanStatus, checkUserUpvoted, createKendala } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
+import KendalaForm from '../components/KendalaForm';
 import { 
   ArrowLeft, Clock, MapPin, CheckCircle2, User, 
   ThumbsUp, Building2, MapPinned, AlertTriangle, 
@@ -21,6 +22,7 @@ const STATUS_MAP = {
   done:        { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-700 border-emerald-300', dot: 'bg-emerald-500', icon: <Flag size={16} />, badge: 'bg-green-50 text-green-700 border-green-200' },
   selesai:     { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-700 border-emerald-300', dot: 'bg-emerald-500', icon: <Flag size={16} />, badge: 'bg-green-50 text-green-700 border-green-200' },
   rejected:    { label: 'Ditolak',             color: 'bg-red-100 text-red-700 border-red-300',       dot: 'bg-red-500',   icon: <Ban size={16} />, badge: 'bg-red-50 text-red-700 border-red-200' },
+  kendala:     { label: 'Kendala Dilaporkan', color: 'bg-amber-100 text-amber-800 border-amber-300', dot: 'bg-amber-500', icon: <AlertTriangle size={16} />, badge: 'bg-amber-50 text-amber-700 border-amber-200' },
 };
 
 const PRIORITY_MAP = {
@@ -39,6 +41,7 @@ export default function LaporanDetail() {
   const [upvoted, setUpvoted] = useState(false);
   const [upvoteLoading, setUpvoteLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showKendalaForm, setShowKendalaForm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -78,6 +81,23 @@ export default function LaporanDetail() {
     setActionLoading(true);
     const { success } = await updateLaporanStatus(id, status, null, ket);
     if (success) loadData();
+    setActionLoading(false);
+  };
+
+  const handleReportKendala = () => {
+    setShowKendalaForm(true);
+  };
+
+  const handleSubmitKendala = async (deskripsi) => {
+    setActionLoading(true);
+    const { success, error } = await createKendala(id, deskripsi);
+    if (success) {
+      alert('Kendala berhasil dilaporkan');
+      setShowKendalaForm(false);
+      loadData();
+    } else {
+      alert('Gagal melaporkan kendala: ' + (error || 'Terjadi kesalahan sistem'));
+    }
     setActionLoading(false);
   };
 
@@ -267,6 +287,17 @@ export default function LaporanDetail() {
             </div>
           </div>
 
+          {/* FORM KENDALA (INLINE) */}
+          {showKendalaForm && (
+            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+              <KendalaForm 
+                onSubmit={handleSubmitKendala}
+                onCancel={() => setShowKendalaForm(false)}
+                loading={actionLoading}
+              />
+            </div>
+          )}
+
           {/* ADMIN CONSOLE */}
           {isAdmin && (
             <div className="bg-[#0F172A] rounded-[2.5rem] shadow-2xl p-10 text-white relative overflow-hidden group">
@@ -320,7 +351,13 @@ export default function LaporanDetail() {
                         <button onClick={() => handleUpdateStatus('in_progress')} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-purple-900/40 transition-all uppercase tracking-widest">Mulai Perbaikan</button>
                       )}
                       {data.status === 'in_progress' && (
-                        <button onClick={() => handleUpdateStatus('done')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-900/40 transition-all uppercase tracking-widest">Selesaikan Proyek</button>
+                        <div className="space-y-3">
+                          <button onClick={() => handleUpdateStatus('done')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-900/40 transition-all uppercase tracking-widest">Selesaikan Proyek</button>
+                          <button onClick={handleReportKendala} className="w-full bg-amber-500 hover:bg-amber-600 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-amber-900/40 transition-all uppercase tracking-widest flex items-center justify-center gap-2">
+                            <AlertTriangle size={14} />
+                            Laporkan Kendala
+                          </button>
+                        </div>
                       )}
                       {data.status !== 'pending' && (
                         <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-3">
@@ -352,61 +389,71 @@ export default function LaporanDetail() {
             </div>
           </div>
 
-          <div className="relative z-10 max-w-4xl mx-auto">
-            {data.history && data.history.length > 0 ? (
-              <div className="space-y-12">
-                {data.history.map((h, i) => {
-                  const hCfg = STATUS_MAP[h.status] || STATUS_MAP.pending;
-                  const isLast = i === data.history.length - 1;
-                  return (
-                    <div key={h.id} className="flex items-center gap-8 md:gap-12 relative group">
-                      {/* Vertical line connector - Top half */}
-                      {i !== 0 && (
-                        <div className="absolute top-0 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0"></div>
-                      )}
-                      {/* Vertical line connector - Bottom half */}
-                      {!isLast && (
-                        <div className="absolute top-1/2 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0 group-hover:bg-indigo-100 transition-colors"></div>
-                      )}
-                      
-                      {/* Node Dot with Status-Specific Icon */}
-                      <div className={`relative z-10 w-14 h-14 rounded-[1.25rem] ${hCfg.dot} flex items-center justify-center shrink-0 border-4 border-white shadow-2xl transition-all duration-300 group-hover:scale-110 text-white`}>
-                        {hCfg.icon}
-                      </div>
+           <div className="relative z-10 max-w-4xl mx-auto">
+             {(() => {
+               const timeline = [
+                 ...(data.history || []).map(h => ({ ...h, type: 'status' })),
+                 ...(data.kendala_laporan || []).map(k => ({ ...k, type: 'kendala', status: 'kendala', catatan: k.alasan || k.deskripsi }))
+               ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-                      {/* Content Card */}
-                      <div className="flex-1 bg-slate-50/50 hover:bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                          <span className={`text-[10px] font-black px-4 py-1.5 rounded-xl border uppercase tracking-widest w-fit ${hCfg.badge}`}>
-                            {hCfg.label}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em] flex items-center gap-2">
-                            <Clock size={12} />
-                            {new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                          </span>
-                        </div>
-                        {h.catatan && (
-                          <div className="flex gap-4">
-                             <div className="mt-1.5 text-indigo-300">
-                                <Info size={16} />
+               if (timeline.length > 0) {
+                 return (
+                   <div className="space-y-12">
+                     {timeline.map((h, i) => {
+                       const hCfg = STATUS_MAP[h.status] || STATUS_MAP.pending;
+                       const isLast = i === timeline.length - 1;
+                       return (
+                         <div key={h.id || i} className="flex items-center gap-8 md:gap-12 relative group">
+                           {/* Vertical line connector - Top half */}
+                           {i !== 0 && (
+                             <div className="absolute top-0 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0"></div>
+                           )}
+                           {/* Vertical line connector - Bottom half */}
+                           {!isLast && (
+                             <div className="absolute top-1/2 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0 group-hover:bg-indigo-100 transition-colors"></div>
+                           )}
+                           
+                           {/* Node Dot with Status-Specific Icon */}
+                           <div className={`relative z-10 w-14 h-14 rounded-[1.25rem] ${hCfg.dot} flex items-center justify-center shrink-0 border-4 border-white shadow-2xl transition-all duration-300 group-hover:scale-110 text-white`}>
+                             {hCfg.icon}
+                           </div>
+
+                           {/* Content Card */}
+                           <div className="flex-1 bg-slate-50/50 hover:bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
+                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                               <span className={`text-[10px] font-black px-4 py-1.5 rounded-xl border uppercase tracking-widest w-fit ${hCfg.badge}`}>
+                                 {hCfg.label}
+                               </span>
+                               <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em] flex items-center gap-2">
+                                 <Clock size={12} />
+                                 {new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                               </span>
                              </div>
-                             <p className="text-sm text-slate-600 font-medium leading-relaxed italic">
-                                "{h.catatan}"
-                             </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
-                <Clock size={60} strokeWidth={1} className="mx-auto text-slate-200 mb-6" />
-                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Belum ada aktivitas tercatat</p>
-              </div>
-            )}
-          </div>
+                             {h.catatan && (
+                               <div className="flex gap-4">
+                                  <div className={`mt-1.5 ${h.type === 'kendala' ? 'text-amber-500' : 'text-indigo-300'}`}>
+                                     {h.type === 'kendala' ? <AlertTriangle size={16} /> : <Info size={16} />}
+                                  </div>
+                                  <p className="text-sm text-slate-600 font-medium leading-relaxed italic">
+                                     "{h.catatan}"
+                                  </p>
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 );
+               }
+               return (
+                 <div className="text-center py-20 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
+                   <Clock size={60} strokeWidth={1} className="mx-auto text-slate-200 mb-6" />
+                   <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Belum ada aktivitas tercatat</p>
+                 </div>
+               );
+             })()}
+           </div>
         </div>
 
         {/* ===== PROJECT COMPLETION ===== */}
