@@ -1,6 +1,4 @@
-node_modules/
 .env
 .env.*
-dist/
-.DS_Store
-*.local
+Front-End/.env
+node_modules/
