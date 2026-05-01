@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getLaporanById, upvoteLaporan, checkUserUpvoted, updateLaporanStatus } from '../services/laporanService';
+import { getLaporanById, upvoteLaporan, updateLaporanStatus } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import { 
@@ -49,10 +49,10 @@ export default function LaporanDetail() {
     const result = await getLaporanById(id);
     if (result.success) {
       setData(result.data);
-      if (user) {
-        const uvRes = await checkUserUpvoted(id);
-        if (uvRes.success) setUpvoted(uvRes.upvoted);
-      }
+     // if (user) {
+        //const uvRes = await checkUserUpvoted(id);
+        //if (uvRes.success) setUpvoted(uvRes.upvoted);
+     // }
     } else {
       alert('Laporan tidak ditemukan');
       navigate('/laporan');

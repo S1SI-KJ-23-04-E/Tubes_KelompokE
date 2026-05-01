@@ -306,3 +306,35 @@ export const createKendala = async (laporan_id, deskripsi) => {
 
   return { data, error };
 };
+
+// ✅ TAMBAHKAN DI SINI
+export async function upvoteLaporan(laporanId) {
+  try {
+    const userId = await getCurrentUserId();
+
+    const { data: existing } = await supabase
+      .from('upvote_laporan')
+      .select('*')
+      .eq('laporan_id', laporanId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from('upvote_laporan')
+        .delete()
+        .eq('id', existing.id);
+
+      return { success: true, upvoted: false };
+    } else {
+      await supabase
+        .from('upvote_laporan')
+        .insert([{ laporan_id: laporanId, user_id: userId }]);
+
+      return { success: true, upvoted: true };
+    }
+  } catch (error) {
+    console.error('Error upvote:', error);
+    return { success: false };
+  }
+}
