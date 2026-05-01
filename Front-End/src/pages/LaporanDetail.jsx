@@ -22,6 +22,7 @@ export default function LaporanDetail() {
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isOwner = profile?.id === data?.pelapor_id;
   
   // Admin Action State
   const [newStatus, setNewStatus] = useState('');
@@ -203,7 +204,13 @@ export default function LaporanDetail() {
         </div>
       ) : (
         (data.status === 'selesai' || data.status === 'done') && (
-          <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
+          isOwner ? (
+            <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
+          ) : (
+            <div className="bg-slate-50 rounded-3xl p-6 border border-slate-200 text-slate-600 mb-8">
+              <p className="font-medium">Feedback hanya dapat diberikan oleh pembuat laporan ini.</p>
+            </div>
+          )
         )
       )}
     </div>
