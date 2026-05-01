@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8001/api/profile";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/profile` : "http://localhost:8002/api/profile";
 
 // GET PROFILE
 export const getProfile = async (id) => {

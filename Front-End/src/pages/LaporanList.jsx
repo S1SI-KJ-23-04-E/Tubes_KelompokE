@@ -10,13 +10,14 @@ import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
 import { Plus, List, Clock, ChevronRight, Trash2, Inbox, Search } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api';
 
 export default function LaporanList() {
   const [laporanSaya, setLaporanSaya] = useState([]);   
   const [laporanMasuk, setLaporanMasuk] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadError, setLoadError] = useState('');
   
   const [searchParams] = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
@@ -54,6 +55,7 @@ export default function LaporanList() {
 
     } catch (err) {
       console.error(err);
+      setLoadError(err?.message || 'Gagal memuat data dari server.');
     }
 
     setLoading(false);
@@ -79,79 +81,88 @@ export default function LaporanList() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="text-2xl font-bold">{isAdmin ? 'Laporan Masuk' : 'Laporan Saya'}</h1>
 
-      <h1 className="text-2xl font-bold mb-6">
-        {isAdmin ? 'Laporan Masuk' : 'Laporan Saya'}
-      </h1>
+        {isAdmin && (
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Cari laporan..."
+              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
 
-      {/* SEARCH ADMIN */}
-      {isAdmin && (
-        <input
-          type="text"
-          placeholder="Cari laporan..."
-          className="border p-2 mb-4 w-full"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      )}
-
-      {/* LOADING */}
       {loading ? (
-        <p>Loading...</p>
+        <div className="text-center py-16 text-slate-500">Loading...</div>
+      ) : loadError ? (
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
+          <p className="font-semibold mb-2">Tidak dapat terhubung ke server backend.</p>
+          <p className="text-sm mb-4">Pastikan backend dijalankan di <code className="bg-white px-2 py-1 rounded">http://localhost:8001</code>.</p>
+          <p className="text-xs text-slate-500">Error: {loadError}</p>
+        </div>
       ) : (
         <>
-          {/* ADMIN VIEW */}
           {isAdmin ? (
             laporanMasuk.length === 0 ? (
-              <p>Tidak ada laporan</p>
+              <div className="rounded-3xl border border-dashed border-slate-300 p-12 text-center text-slate-500">
+                Tidak ada laporan
+              </div>
             ) : (
-              laporanMasuk.map(item => (
-                <div key={item.id} className="border p-4 mb-3 rounded">
-                  <h3 className="font-bold">{item.deskripsi}</h3>
-                  <p>{item.alamat}</p>
-
-                  <button onClick={() => handleUpdateStatus(item.id, 'verified')}>
-                    Verifikasi
-                  </button>
-
-                  <button onClick={() => handleUpdateStatus(item.id, 'rejected')}>
-                    Tolak
-                  </button>
-                </div>
-              ))
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {laporanMasuk.map(item => (
+                  <LaporanCard
+                    key={item.id}
+                    laporan={item}
+                    isAdmin
+                    actionButtons={[
+                      <button
+                        key="verify"
+                        onClick={() => handleUpdateStatus(item.id, 'verified')}
+                        className="text-xs text-white bg-green-600 px-3 py-2 rounded-lg hover:bg-green-700 transition"
+                      >
+                        Verifikasi
+                      </button>,
+                      <button
+                        key="reject"
+                        onClick={() => handleUpdateStatus(item.id, 'rejected')}
+                        className="text-xs text-white bg-red-600 px-3 py-2 rounded-lg hover:bg-red-700 transition"
+                      >
+                        Tolak
+                      </button>
+                    ]}
+                  />
+                ))}
+              </div>
             )
           ) : (
             <>
-              <Link to="/laporan/baru">
-                <button className="bg-indigo-500 text-white px-4 py-2 mb-4 rounded">
-                  + Buat Laporan
-                </button>
-              </Link>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <Link to="/laporan/baru" className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition">
+                  <Plus className="mr-2" size={18} /> Buat Laporan
+                </Link>
+              </div>
 
               {laporanSaya.length === 0 ? (
-                <p>Belum ada laporan</p>
+                <div className="rounded-3xl border border-dashed border-slate-300 p-12 text-center text-slate-500">
+                  Belum ada laporan
+                </div>
               ) : (
-                laporanSaya.map(item => (
-                  <div key={item.id} className="border p-4 mb-3 rounded flex justify-between">
-                    <div>
-                      <h3>{item.deskripsi}</h3>
-                      <p>{item.alamat}</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {item.status === 'pending' && (
-                        <button onClick={() => handleDelete(item.id)}>
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-
-                      <Link to={`/laporan/${item.id}`}>
-                        <ChevronRight />
-                      </Link>
-                    </div>
-                  </div>
-                ))
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {laporanSaya.map(item => (
+                    <LaporanCard
+                      key={item.id}
+                      laporan={item}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
               )}
             </>
           )}

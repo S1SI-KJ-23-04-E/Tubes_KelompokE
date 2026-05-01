@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getLaporanById, updateLaporanStatus } from '../services/laporanService';
-import { getLaporanById, upvoteLaporan, updateLaporanStatus } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import { ArrowLeft, Clock, MapPin } from 'lucide-react';
@@ -137,11 +136,11 @@ export default function LaporanDetail() {
 
       {/* FEEDBACK */}
       {(data.status === 'selesai' || data.status === 'done') && (
-        isOwner ? (
+        profile?.role === 'warga' && isOwner ? (
           <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
         ) : (
           <p className="text-gray-500">
-            Hanya pelapor yang bisa memberi feedback
+            Hanya warga pelapor yang bisa memberi feedback
           </p>
         )
       )}

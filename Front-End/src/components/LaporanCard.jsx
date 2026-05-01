@@ -1,7 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
-import { useState } from "react";
-
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -15,8 +13,7 @@ export default function LaporanCard({
   laporan, 
   onDelete, 
   minimal = false, 
-  isAdmin = false,        // ✅ TAMBAHAN
-  onUpdate                // ✅ TAMBAHAN
+  actionButtons = []
 }) {
   const {
     id,
@@ -29,8 +26,6 @@ export default function LaporanCard({
     upvote_count
   } = laporan;
 
-  const [showUpload, setShowUpload] = useState(false); // ✅ TAMBAHAN
-
   const date = new Date(created_at).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'short',
@@ -38,7 +33,7 @@ export default function LaporanCard({
   });
 
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all relative group h-full flex flex-col">
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex flex-col h-full">
 
       {!minimal && (
         <div className="flex justify-between items-start mb-3">
@@ -60,64 +55,40 @@ export default function LaporanCard({
         </span>
       </p>
 
-      <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50">
-        
-        {!minimal ? (
-          <div className="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
-            👍 {upvote_count || 0} Upvotes
+      <div className="mt-auto pt-4 border-t border-gray-50">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {!minimal ? (
+            <div className="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+              👍 {upvote_count || 0} Upvotes
+            </div>
+          ) : (
+            <span className="text-[10px] text-gray-400 italic">Dibuat pada {date}</span>
+          )}
+
+          <div className="flex flex-wrap gap-2 items-center">
+            {status === 'pending' && onDelete && (
+              <button
+                onClick={(e) => { e.preventDefault(); onDelete(id); }}
+                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Hapus Laporan"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+
+            {actionButtons.map((action, index) => (
+              <div key={index}>{action}</div>
+            ))}
+
+            <Link 
+              to={`/laporan/${id}`}
+              className="text-xs font-bold text-indigo-600 hover:text-white px-4 py-2 bg-indigo-50 hover:bg-indigo-600 rounded-lg transition-colors"
+            >
+              Detail
+            </Link>
           </div>
-        ) : (
-          <span className="text-[10px] text-gray-400 italic">Dibuat pada {date}</span>
-        )}
-        
-        <div className="flex space-x-2 items-center">
-
-          {/* DELETE (EXISTING) */}
-          {status === 'pending' && onDelete && (
-            <button 
-              onClick={(e) => { e.preventDefault(); onDelete(id); }}
-              className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Hapus Laporan"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-
-          {/* ✅ BUTTON ADMIN (DEV-58) */}
-          {isAdmin && status === 'verified' && (
-            <button
-              onClick={() => setShowUpload(true)}
-              className="text-xs bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-600 hover:text-white transition"
-            >
-              Selesaikan + Upload
-            </button>
-          )}
-
-          {isAdmin && (
-            <button
-            onClick={() => navigate(`/admin/informasi/${id}`)}
-            className="text-xs bg-blue-100 text-blue-700 px-3 py-2 rounded">
-
-            </button>
-          )}
-
-          <Link 
-            to={`/laporan/${id}`}
-            className="text-xs font-bold text-indigo-600 hover:text-white px-4 py-2 bg-indigo-50 hover:bg-indigo-600 rounded-lg transition-colors"
-          >
-            Detail
-          </Link>
         </div>
       </div>
-
-      {/* ✅ MODAL UPLOAD */}
-      {showUpload && (
-        <UploadBukti
-          laporanId={id}
-          onClose={() => setShowUpload(false)}
-          onSuccess={onUpdate}
-        />
-      )}
     </div>
   );
 }
