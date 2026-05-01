@@ -21,20 +21,32 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
     upvote_count
   } = laporan;
 
-  const date = new Date(created_at).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  const safeStatus = typeof status === 'string' && status.trim() ? status : 'pending';
+  const safeDate = created_at ? new Date(created_at) : null;
+  const dateLabel = safeDate && !Number.isNaN(safeDate.getTime())
+    ? safeDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })
+    : '-';
 
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 relative group h-full flex flex-col card-hover animate-fade-in-up hover:border-indigo-200">
       {!minimal && (
+<<<<<<< HEAD
         <div className="flex justify-between items-start mb-3 animate-fade-in">
           <span className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${statusColors[status] || 'bg-gray-100'} status-breathing`}>
             {status.replace('_', ' ').toUpperCase()}
           </span>
           <span className="text-xs text-gray-400 transition-all group-hover:text-indigo-400">{date}</span>
+=======
+        <div className="flex justify-between items-start mb-3">
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${statusColors[safeStatus] || 'bg-gray-100'}`}>
+            {safeStatus.replace('_', ' ').toUpperCase()}
+          </span>
+          <span className="text-xs text-gray-400">{dateLabel}</span>
+>>>>>>> Panji_Branch
         </div>
       )}
       
@@ -53,11 +65,15 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
             👍 {upvote_count || 0} Upvotes
           </div>
         ) : (
+<<<<<<< HEAD
           <span className="text-[10px] text-gray-400 italic transition-colors">{date}</span>
+=======
+          <span className="text-[10px] text-gray-400 italic">Dibuat pada {dateLabel}</span>
+>>>>>>> Panji_Branch
         )}
         
         <div className="flex space-x-2">
-          {status === 'pending' && onDelete && (
+          {safeStatus === 'pending' && onDelete && (
             <button 
               onClick={(e) => { e.preventDefault(); onDelete(id); }}
               className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+﻿import { supabase } from '../lib/supabase';
 
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
@@ -215,9 +215,9 @@ export async function getLaporanByKecamatan(kecamatanId) {
   }
 }
 
-export async function getAllLaporan() {
+export async function getAllLaporan(excludeUserId = null) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('laporan')
       .select(`
         *,
@@ -226,6 +226,13 @@ export async function getAllLaporan() {
         profiles ( id, nama )
       `)
       .order('created_at', { ascending: false });
+
+    // If caller provides an excludeUserId, filter out reports from that user at the query level
+    if (excludeUserId) {
+      query = query.neq('pelapor_id', excludeUserId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return { success: true, data: data || [] };
@@ -289,6 +296,7 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     console.error('Error updating status:', error);
     return { success: false, error: error.message };
   }
+<<<<<<< HEAD
 }
 
 export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
@@ -300,80 +308,43 @@ export async function tolakLaporan(id, keterangan = '') {
 }
 
 export const createKendala = async (laporan_id, deskripsi) => {
-  try {
-    const userId = await getCurrentUserId();
-    const { data, error } = await supabase
-      .from('kendala_laporan')
-      .insert([{ 
-        laporan_id, 
-        deskripsi: deskripsi,
-        petugas_id: userId
-      }]);
+  const { data, error } = await supabase
+    .from('kendala_laporan')
+    .insert([{ laporan_id, deskripsi }]);
 
-    if (error) throw error;
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error creating kendala:', error);
-    return { success: false, error: error.message };
-  }
+  return { data, error };
 };
 
 // ✅ TAMBAHKAN DI SINI
-export async function checkUserUpvoted(laporanId) {
-  try {
-    const userId = await getCurrentUserId();
-    const { data, error } = await supabase
-      .from('upvote')
-      .select('id')
-      .eq('laporan_id', laporanId)
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (error) throw error;
-    return { success: true, upvoted: !!data };
-  } catch (error) {
-    console.error('Error checking upvote:', error);
-    return { success: false, upvoted: false };
-  }
-}
-
 export async function upvoteLaporan(laporanId) {
   try {
     const userId = await getCurrentUserId();
 
-    // 1. Cek apakah sudah upvote (gunakan tabel 'upvote' yang benar)
     const { data: existing } = await supabase
-      .from('upvote')
+      .from('upvote_laporan')
       .select('*')
       .eq('laporan_id', laporanId)
       .eq('user_id', userId)
       .maybeSingle();
 
-    // 2. Ambil data laporan untuk mendapatkan count saat ini
-    const { data: laporan } = await supabase
-      .from('laporan')
-      .select('upvote_count')
-      .eq('id', laporanId)
-      .single();
-
-    let newCount = laporan?.upvote_count || 0;
-
     if (existing) {
-      // 3a. Hapus upvote
-      await supabase.from('upvote').delete().eq('id', existing.id);
-      newCount = Math.max(0, newCount - 1);
+      await supabase
+        .from('upvote_laporan')
+        .delete()
+        .eq('id', existing.id);
+
+      return { success: true, upvoted: false };
     } else {
-      // 3b. Tambah upvote
-      await supabase.from('upvote').insert([{ laporan_id: laporanId, user_id: userId }]);
-      newCount = newCount + 1;
+      await supabase
+        .from('upvote_laporan')
+        .insert([{ laporan_id: laporanId, user_id: userId }]);
+
+      return { success: true, upvoted: true };
     }
-
-    // 4. Update upvote_count di tabel laporan
-    await supabase.from('laporan').update({ upvote_count: newCount }).eq('id', laporanId);
-
-    return { success: true, upvoted: !existing, upvote_count: newCount };
   } catch (error) {
     console.error('Error upvote:', error);
-    return { success: false, error: error.message };
+    return { success: false };
   }
-}
+=======
+>>>>>>> Panji_Branch
+}
