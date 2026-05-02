@@ -1,11 +1,9 @@
-
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getLaporanById, upvoteLaporan, updateLaporanStatus } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
-<<<<<<< HEAD
+import UploadBuktiModal from '../components/UploadBuktiModal';
 import { 
   ArrowLeft, Clock, MapPin, CheckCircle2, User, 
   ThumbsUp, Building2, MapPinned, AlertTriangle, 
@@ -14,12 +12,6 @@ import {
   Wrench, Flag, Ban
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-=======
-import UploadBuktiModal from '../components/UploadBuktiModal';
-import { ArrowLeft, Clock, MapPin, CheckCircle2, Upload, AlertCircle } from 'lucide-react';
->>>>>>> Panji_Branch
-
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
 const STATUS_MAP = {
   pending:     { label: 'Menunggu Verifikasi', color: 'bg-amber-100 text-amber-800 border-amber-300', dot: 'bg-amber-400', icon: <Clock size={16} />, badge: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
@@ -37,13 +29,13 @@ const PRIORITY_MAP = {
 };
 
 const TIMELINE_CONFIG = {
-  pending: { line: 'bg-yellow-200', circle: 'bg-yellow-400', text: 'text-yellow-800', icon: AlertCircle },
+  pending: { line: 'bg-yellow-200', circle: 'bg-yellow-400', text: 'text-yellow-800', icon: AlertTriangle },
   verified: { line: 'bg-blue-200', circle: 'bg-blue-500', text: 'text-blue-800', icon: CheckCircle2 },
   in_progress: { line: 'bg-orange-200', circle: 'bg-orange-400', text: 'text-orange-800', icon: Clock },
   done: { line: 'bg-green-200', circle: 'bg-green-500', text: 'text-green-800', icon: CheckCircle2 },
   selesai: { line: 'bg-green-200', circle: 'bg-green-500', text: 'text-green-800', icon: CheckCircle2 },
   diproses: { line: 'bg-orange-200', circle: 'bg-orange-400', text: 'text-orange-800', icon: Clock },
-  rejected: { line: 'bg-red-200', circle: 'bg-red-400', text: 'text-red-800', icon: AlertCircle }
+  rejected: { line: 'bg-red-200', circle: 'bg-red-400', text: 'text-red-800', icon: AlertTriangle }
 };
 
 export default function LaporanDetail() {
@@ -62,6 +54,14 @@ export default function LaporanDetail() {
 
   const safeStatus = typeof data?.status === 'string' && data.status.trim() ? data.status : 'pending';
   const safeHistoryStatus = (value) => (typeof value === 'string' && value.trim() ? value : 'pending');
+  const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
+  const laporanKecamatanId = data?.kecamatan?.id || data?.kecamatan_id;
+  const sameKecamatan = String(userKecamatanId || '') === String(laporanKecamatanId || '');
+  const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
+  const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
+  const isPelapor = String(user?.id || '') === String(data?.pelapor_id || '');
+  const isInternalRole = ['petugas', 'kecamatan', 'super_admin'].includes(profile?.role);
+  const canSubmitFeedback = Boolean(user) && !isInternalRole && isPelapor;
 
   useEffect(() => {
     loadData();
@@ -72,10 +72,6 @@ export default function LaporanDetail() {
     const result = await getLaporanById(id);
     if (result.success) {
       setData(result.data);
-     // if (user) {
-        //const uvRes = await checkUserUpvoted(id);
-        //if (uvRes.success) setUpvoted(uvRes.upvoted);
-     // }
     } else {
       alert('Laporan tidak ditemukan');
       navigate('/laporan');
@@ -108,7 +104,7 @@ export default function LaporanDetail() {
     try {
       setActionLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch(`${API_URL}/admin/laporan/${id}/prioritas`, {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api'}/admin/laporan/${id}/prioritas`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ prioritas: priority.toLowerCase() })
@@ -123,7 +119,7 @@ export default function LaporanDetail() {
     setUploadSuccess('');
     setActionLoading(true);
 
-    const { success, error } = await updateLaporanStatus(id, 'selesai', file, catatanBukti);
+    const { success, error } = await updateLaporanStatus(id, 'done', file, catatanBukti);
 
     setActionLoading(false);
     if (success) {
@@ -156,10 +152,7 @@ export default function LaporanDetail() {
   const priorityCfg = PRIORITY_MAP[finalPriority];
 
   return (
-<<<<<<< HEAD
     <div className="min-h-screen bg-[#F8FAFC] selection:bg-indigo-100 selection:text-indigo-900">
-      
-      {/* ===== HEADER NAVIGATION ===== */}
       <div className="bg-white/70 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <button 
@@ -170,7 +163,7 @@ export default function LaporanDetail() {
             Kembali
           </button>
           <div className="flex items-center gap-2">
-            <button className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
+            <button className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" onClick={() => navigator.share && navigator.share({ title: data.alamat, text: data.deskripsi })}>
               <Share2 size={18} />
             </button>
             <div className="h-6 w-[1px] bg-slate-100 mx-2"></div>
@@ -182,11 +175,7 @@ export default function LaporanDetail() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
-        
-        {/* ===== HERO SECTION (MODERN SPLIT) ===== */}
         <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden mb-12 flex flex-col lg:flex-row min-h-[500px]">
-          
-          {/* Left: Photo (60%) */}
           <div className="lg:w-[62%] relative bg-slate-100 overflow-hidden">
             {data.foto_url ? (
               <img 
@@ -200,7 +189,6 @@ export default function LaporanDetail() {
                 <p className="text-xs font-black uppercase tracking-[0.2em]">Foto bukti tidak tersedia</p>
               </div>
             )}
-            {/* Status Floating Label */}
             <div className="absolute top-8 left-8">
               <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-2xl border border-white/50 flex items-center gap-3">
                 <div className={`w-2.5 h-2.5 rounded-full ${statusCfg.dot} animate-pulse`}></div>
@@ -209,7 +197,6 @@ export default function LaporanDetail() {
             </div>
           </div>
 
-          {/* Right: Primary Info (38%) */}
           <div className="lg:w-[38%] p-10 lg:p-12 flex flex-col justify-between bg-white border-l border-slate-50">
             <div className="space-y-8">
               <div>
@@ -258,7 +245,6 @@ export default function LaporanDetail() {
               </div>
             </div>
 
-            {/* Support / Interaction */}
             <div className="mt-12 pt-8 border-t border-slate-100">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -282,10 +268,7 @@ export default function LaporanDetail() {
           </div>
         </div>
 
-        {/* ===== CONTENT GRID ===== */}
         <div className="space-y-12 mb-12">
-          
-          {/* Deskripsi (Full Width) */}
           <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 overflow-hidden relative">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <FileText size={120} />
@@ -306,11 +289,9 @@ export default function LaporanDetail() {
             </div>
           </div>
 
-          {/* ADMIN CONSOLE */}
           {isAdmin && (
             <div className="bg-[#0F172A] rounded-[2.5rem] shadow-2xl p-10 text-white relative overflow-hidden group">
               <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[60%] bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-700"></div>
-              
               <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-10">
                   <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-indigo-400 border border-white/10 shadow-2xl">
@@ -349,22 +330,33 @@ export default function LaporanDetail() {
                       Tindakan Lanjutan
                     </label>
                     <div className="space-y-3">
-                      {data.status === 'pending' && (
+                      {canModerate && data.status === 'pending' && (
                         <div className="flex gap-3">
                           <button onClick={() => handleUpdateStatus('verified')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-blue-900/40 transition-all active:scale-95 uppercase tracking-widest">Verifikasi</button>
                           <button onClick={() => handleUpdateStatus('rejected')} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-red-900/40 transition-all active:scale-95 uppercase tracking-widest">Tolak</button>
                         </div>
                       )}
-                      {data.status === 'verified' && (
+                      {canWorkAction && data.status === 'verified' && (
                         <button onClick={() => handleUpdateStatus('in_progress')} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-purple-900/40 transition-all uppercase tracking-widest">Mulai Perbaikan</button>
                       )}
-                      {data.status === 'in_progress' && (
+                      {canWorkAction && data.status === 'in_progress' && (
                         <button onClick={() => handleUpdateStatus('done')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-900/40 transition-all uppercase tracking-widest">Selesaikan Proyek</button>
                       )}
-                      {data.status !== 'pending' && (
+                      {canModerate && data.status !== 'pending' && (
                         <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-3">
                           <XCircle size={20} className="text-red-500 shrink-0" />
                           <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight">Penolakan tidak tersedia setelah tahap verifikasi.</p>
+                        </div>
+                      )}
+                      {canWorkAction && ['verified','in_progress'].includes(data.status) && (
+                        <div className="pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setUploadModalOpen(true)}
+                            className="inline-flex items-center gap-2 rounded-3xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                          >
+                            <ArrowUpCircle size={18} /> Upload Bukti
+                          </button>
                         </div>
                       )}
                     </div>
@@ -375,10 +367,8 @@ export default function LaporanDetail() {
           )}
         </div>
 
-        {/* ===== TIMELINE SECTION ===== */}
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 mb-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -mr-32 -mt-32"></div>
-          
           <div className="flex items-center justify-between mb-16 relative z-10">
             <div className="flex items-center gap-5">
               <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-100">
@@ -399,21 +389,15 @@ export default function LaporanDetail() {
                   const isLast = i === data.history.length - 1;
                   return (
                     <div key={h.id} className="flex items-center gap-8 md:gap-12 relative group">
-                      {/* Vertical line connector - Top half */}
                       {i !== 0 && (
                         <div className="absolute top-0 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0"></div>
                       )}
-                      {/* Vertical line connector - Bottom half */}
                       {!isLast && (
                         <div className="absolute top-1/2 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0 group-hover:bg-indigo-100 transition-colors"></div>
                       )}
-                      
-                      {/* Node Dot with Status-Specific Icon */}
                       <div className={`relative z-10 w-14 h-14 rounded-[1.25rem] ${hCfg.dot} flex items-center justify-center shrink-0 border-4 border-white shadow-2xl transition-all duration-300 group-hover:scale-110 text-white`}>
                         {hCfg.icon}
                       </div>
-
-                      {/* Content Card */}
                       <div className="flex-1 bg-slate-50/50 hover:bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                           <span className={`text-[10px] font-black px-4 py-1.5 rounded-xl border uppercase tracking-widest w-fit ${hCfg.badge}`}>
@@ -448,11 +432,9 @@ export default function LaporanDetail() {
           </div>
         </div>
 
-        {/* ===== PROJECT COMPLETION ===== */}
         {(data.status === 'selesai' || data.status === 'done') && data.bukti && (
           <div className="bg-[#064E3B] rounded-[3rem] shadow-2xl shadow-emerald-900/30 p-10 lg:p-16 mb-12 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-[50%] h-full bg-emerald-500/10 blur-[120px] rounded-full"></div>
-            
             <div className="relative z-10 flex flex-col lg:flex-row gap-16 items-center">
               <div className="lg:w-[45%] space-y-10">
                 <div className="space-y-6">
@@ -464,7 +446,6 @@ export default function LaporanDetail() {
                     Infrastruktur telah berhasil dipulihkan. Terima kasih telah berperan aktif dalam membangun kota yang lebih baik.
                   </p>
                 </div>
-
                 {data.bukti.keterangan && (
                   <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[2rem] border border-white/10 shadow-inner">
                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-3">Catatan Final Tim Lapangan</p>
@@ -483,148 +464,14 @@ export default function LaporanDetail() {
                 </div>
               </div>
             </div>
-=======
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center text-[#1e3a8a] hover:text-blue-700 font-bold mb-8 transition-all duration-300 group text-sm md:text-base">
-          <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-          Kembali ke Daftar
-        </button>
-
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden mb-8">
-        <div className="p-8 md:p-10 border-b-2 border-blue-200 flex flex-col md:flex-row justify-between items-start gap-6">
-          <div className="flex-1">
-            <span className={`text-xs font-black px-4 py-2 rounded-full inline-block mb-4 tracking-wider shadow-sm ${statusColors[safeStatus] || 'bg-gray-100'}`}>
-              {safeStatus.replace('_', ' ').toUpperCase()}
-            </span>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#1e3a8a] to-blue-600 bg-clip-text text-transparent mb-4 leading-tight">Detail Laporan</h1>
-            <p className="text-slate-600 flex items-center font-medium mb-3 text-base">
-              <Clock size={20} className="mr-2 text-[#1e3a8a]" />
-              Dilaporkan: {new Date(data.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
-            </p>
-            {isAdmin && data.profiles && (
-              <p className="text-[#1e3a8a] flex items-center font-bold mt-3 bg-blue-50 px-4 py-2.5 rounded-lg w-max border border-blue-200">
-                👤 Pelapor: {data.profiles.nama}
-              </p>
-            )}
-          </div>
-          <div className="bg-gradient-to-br from-blue-50 to-slate-50 px-6 py-6 rounded-xl text-center border-2 border-blue-200 shadow-lg min-w-[140px]">
-            <span className="block text-4xl mb-3">👍</span>
-            <span className="font-bold text-[#1e3a8a] text-3xl">{data.upvote_count || 0}</span>
-            <span className="block text-xs text-slate-600 font-bold uppercase mt-2 tracking-wide">Upvotes</span>
-          </div>
-        </div>
-
-        <div className="p-8 md:p-10">
-          <h3 className="font-bold text-slate-900 mb-4 text-2xl flex items-center">
-            <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
-            Deskripsi Kejadian
-          </h3>
-          <p className="text-slate-700 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-xl border-2 border-slate-200 mb-8 whitespace-pre-wrap leading-relaxed text-base font-medium">
-            {data.deskripsi}
-          </p>
-
-          <h3 className="font-bold text-slate-900 mb-4 text-2xl flex items-center">
-            <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
-            <MapPin size={24} className="mr-2 text-[#1e3a8a]" /> Lokasi Laporan
-          </h3>
-          <div className="text-slate-700 mb-8 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-xl border-2 border-slate-200">
-            <p className="text-lg font-bold text-slate-800 mb-2">{data.alamat}</p>
-            <span className="text-slate-600 font-medium">
-              📍 Kelurahan {data.kelurahan?.nama_kelurahan}, Kecamatan {data.kecamatan?.nama_kecamatan}
-            </span>
-          </div>
-
-          {data.foto_url && (
-            <div className="mb-8">
-              <h3 className="font-bold text-slate-900 mb-4 text-2xl flex items-center">
-                <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
-                Bukti Foto Kerusakan
-              </h3>
-              <div className="rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg">
-                <img src={data.foto_url} alt="Foto laporan" className="w-full max-h-[500px] object-cover hover:scale-105 transition-transform duration-500" />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {isAdmin && ['verified', 'in_progress'].includes(data.status) && (
-        <div className="mb-8 rounded-3xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Upload Bukti Penyelesaian</h3>
-              <p className="text-sm text-slate-600 mt-1">Unggah foto bukti jika pekerjaan telah selesai, lalu status laporan akan diatur menjadi selesai.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setUploadModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-3xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
-            >
-              <Upload size={18} /> Upload Bukti
-            </button>
-          </div>
-          {uploadSuccess && <p className="mt-4 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">{uploadSuccess}</p>}
-          {uploadError && <p className="mt-4 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{uploadError}</p>}
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-10 mb-8">
-        <h3 className="text-3xl font-bold bg-gradient-to-r from-[#1e3a8a] to-blue-600 bg-clip-text text-transparent mb-8 flex items-center">
-          <span className="w-1 h-1 bg-[#1e3a8a] rounded-full mr-3"></span>
-          Riwayat Penanganan
-        </h3>
-        <div className="space-y-6">
-          {data.history?.map((h, i) => {
-            const s = safeHistoryStatus(h.status);
-            const cfg = TIMELINE_CONFIG[s] || TIMELINE_CONFIG.pending;
-            const Icon = cfg.icon || CheckCircle2;
-            return (
-              <div key={h.id} className="flex relative">
-                {i !== data.history.length - 1 && (
-                  <div className={`absolute top-12 left-6 bottom-[-1.8rem] w-1 -ml-[2px] z-0 ${cfg.line}`}></div>
-                )}
-                <div className={`relative z-10 w-12 h-12 rounded-full ${cfg.circle} text-white flex items-center justify-center shrink-0 border-4 border-white shadow-lg`}>
-                  <Icon size={20} />
-                </div>
-                <div className="ml-6 pb-2 flex-1">
-                  <p className={`font-bold text-lg ${cfg.text || 'text-slate-800'}`}>{s.replace('_', ' ').toUpperCase()}</p>
-                  <p className="text-sm font-medium text-slate-500 mt-1.5">🕐 {new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</p>
-                  {h.catatan && (
-                    <p className="text-base mt-3.5 text-slate-700 bg-gradient-to-br from-slate-50 to-blue-50 p-4 rounded-lg border-2 border-slate-200 italic font-medium">
-                      "{h.catatan}"
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {(!data.history || data.history.length === 0) && (
-            <p className="text-slate-500 italic text-center py-8">Belum ada riwayat penanganan.</p>
-          )}
-        </div>
-      </div>
-
-      {(data.status === 'selesai' || data.status === 'done') && data.bukti && (
-        <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl shadow-xl border-2 border-green-200 p-8 md:p-10 mb-8">
-          <h3 className="text-3xl font-bold text-green-800 mb-5 flex items-center">
-            <CheckCircle2 size={32} className="mr-3 text-green-600" /> Laporan Telah Diselesaikan ✓
-          </h3>
-          <p className="text-green-800 text-lg mb-7 font-medium leading-relaxed">{data.bukti.keterangan || 'Infrastruktur telah selesai diperbaiki.'}</p>
-          <div className="rounded-2xl overflow-hidden shadow-lg border-2 border-green-200">
-            <img src={data.bukti.url_foto} alt="Bukti penyelesaian" className="w-full max-h-[400px] object-cover" />
->>>>>>> Panji_Branch
           </div>
         )}
 
-<<<<<<< HEAD
-        {/* ===== FEEDBACK SECTION ===== */}
         {(data.status === 'selesai' || data.status === 'done') && (
           <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-10 text-slate-50 opacity-10">
                <Star size={160} />
             </div>
-            
             <div className="relative z-10 max-w-4xl mx-auto">
               <div className="flex items-center gap-5 mb-14">
                 <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center text-white shadow-xl shadow-amber-100">
@@ -655,33 +502,27 @@ export default function LaporanDetail() {
                   ))}
                 </div>
               )}
-              
               <div className="bg-gradient-to-br from-indigo-50/50 to-white p-10 rounded-[2.5rem] border border-indigo-100/50 shadow-inner">
-                <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
+                <FeedbackForm
+                  laporanId={data.id}
+                  onSubmitted={loadData}
+                  currentUserId={user?.id}
+                  canSubmit={canSubmitFeedback}
+                />
               </div>
             </div>
           </div>
         )}
+
+        <UploadBuktiModal
+          open={uploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          onSubmit={handleUploadSubmit}
+          loading={actionLoading}
+          errorMessage={uploadError}
+          successMessage={uploadSuccess}
+        />
       </div>
     </div>
   );
 }
-
-=======
-      {(data.status === 'selesai' || data.status === 'done') && (
-        <FeedbackForm laporanId={data.id} onSubmitted={loadData} />
-      )}
-
-      <UploadBuktiModal
-        open={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        onSubmit={handleUploadSubmit}
-        loading={actionLoading}
-        errorMessage={uploadError}
-        successMessage={uploadSuccess}
-      />
-      </div>
-    </div>
-  );
-}
->>>>>>> Panji_Branch

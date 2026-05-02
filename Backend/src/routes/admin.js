@@ -67,6 +67,24 @@ router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => 
 
 // PUT /api/admin/laporan/:id/prioritas
 router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin kecamatan dan super admin yang boleh mengubah prioritas laporan.' });
+  }
+
+  if (req.user?.profile?.role === 'kecamatan') {
+    const { data: report, error: reportError } = await supabaseAdmin
+      .from('laporan')
+      .select('kecamatan_id')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (reportError) return res.status(500).json({ success: false, error: reportError.message });
+    if (!report) return res.status(404).json({ success: false, error: 'Laporan tidak ditemukan.' });
+    if (String(report.kecamatan_id) !== String(req.user.profile.kecamatan_id || '')) {
+      return res.status(403).json({ success: false, error: 'Anda hanya dapat mengubah prioritas laporan di kecamatan Anda.' });
+    }
+  }
+
   const { prioritas } = req.body;
   const { error } = await supabaseAdmin
     .from('laporan')
@@ -79,8 +97,31 @@ router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
 
 // PUT /api/admin/laporan/:id/status
 router.put('/laporan/:id/status', authenticate, async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin kecamatan dan super admin yang boleh mengubah status laporan.' });
+  }
+
   const { status, keterangan } = req.body;
   const userId = req.user.id;
+
+  const allowedStatuses = new Set(['verified', 'rejected', 'in_progress', 'done', 'selesai']);
+  if (!allowedStatuses.has(status)) {
+    return res.status(400).json({ success: false, error: 'Status tidak valid.' });
+  }
+
+  if (req.user?.profile?.role === 'kecamatan') {
+    const { data: report, error: reportError } = await supabaseAdmin
+      .from('laporan')
+      .select('kecamatan_id')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (reportError) return res.status(500).json({ success: false, error: reportError.message });
+    if (!report) return res.status(404).json({ success: false, error: 'Laporan tidak ditemukan.' });
+    if (String(report.kecamatan_id) !== String(req.user.profile.kecamatan_id || '')) {
+      return res.status(403).json({ success: false, error: 'Anda hanya dapat mengubah status laporan di kecamatan Anda.' });
+    }
+  }
 
   const updateData = {
     status,

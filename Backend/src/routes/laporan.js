@@ -1,4 +1,4 @@
-ï»¿import { Router } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/laporan â€” Buat laporan baru
+// POST /api/laporan — Buat laporan baru
 router.post('/', authenticate, async (req, res) => {
   const { kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url } = req.body;
   const userId = req.user.id;
@@ -19,6 +19,7 @@ router.post('/', authenticate, async (req, res) => {
 
   if (error) return res.status(500).json({ success: false, error: error.message });
 
+  // Catat history
   await supabaseAdmin.from('history_laporan').insert({
     laporan_id: laporan.id,
     status: 'pending',
@@ -28,12 +29,11 @@ router.post('/', authenticate, async (req, res) => {
   res.json({ success: true, data: [laporan] });
 });
 
-// GET /api/laporan/user â€” Laporan milik user yang login
+// GET /api/laporan/user — Laporan milik user yang login
 router.get('/user', authenticate, async (req, res) => {
-  const selectQuery = '*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), history_laporan(id, status, catatan, created_at)';
   const { data, error } = await supabaseAdmin
     .from('laporan')
-    .select(selectQuery)
+    .select(`*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), history_laporan(id, status, catatan, created_at)`)
     .eq('pelapor_id', req.user.id)
     .order('created_at', { ascending: false });
 
@@ -41,7 +41,7 @@ router.get('/user', authenticate, async (req, res) => {
   res.json({ success: true, data });
 });
 
-// GET /api/laporan â€” Semua laporan (public feed)
+// GET /api/laporan — Semua laporan (public feed)
 router.get('/', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -57,20 +57,10 @@ router.get('/', async (req, res) => {
   res.json({ success: true, data: data || [] });
 });
 
-// GET /api/laporan/:id â€” Detail laporan
+// GET /api/laporan/:id — Detail laporan
 router.get('/:id', async (req, res) => {
-  const selectQuery = [
-    '*',
-    'kecamatan:kecamatan_id(id, nama_kecamatan)',
-    'kelurahan:kelurahan_id(id, nama_kelurahan)',
-    'profiles:pelapor_id(id, nama)',
-    'history_laporan(*)',
-    'bukti_selesai(*)'
-  ].join(',');
-
   const { data, error } = await supabaseAdmin
     .from('laporan')
-<<<<<<< HEAD
     .select(`
       *,
       kecamatan:kecamatan_id(id, nama_kecamatan),
@@ -80,9 +70,6 @@ router.get('/:id', async (req, res) => {
       bukti_selesai(*),
       feedback(*)
     `)
-=======
-    .select(selectQuery)
->>>>>>> Panji_Branch
     .eq('id', req.params.id)
     .single();
 
@@ -90,7 +77,7 @@ router.get('/:id', async (req, res) => {
   res.json({ success: true, data });
 });
 
-// DELETE /api/laporan/:id â€” Hapus laporan (hanya pending milik sendiri)
+// DELETE /api/laporan/:id — Hapus laporan (hanya pending milik sendiri)
 router.delete('/:id', authenticate, async (req, res) => {
   const { error } = await supabaseAdmin
     .from('laporan')
@@ -103,8 +90,7 @@ router.delete('/:id', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-<<<<<<< HEAD
-// POST /api/laporan/:id/upvote â€” Upvote laporan
+// POST /api/laporan/:id/upvote — Upvote laporan
 router.post('/:id/upvote', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
@@ -174,7 +160,7 @@ router.post('/:id/upvote', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/laporan/:id/user-upvoted â€” Check apakah user sudah upvote laporan ini
+// GET /api/laporan/:id/user-upvoted — Check apakah user sudah upvote laporan ini
 router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
@@ -197,9 +183,7 @@ router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   }
 });
 
-export default router;
-=======
-// POST /api/laporan/:id/selesai â€” Upload bukti & set selesai (ADMIN/PETUGAS)
+// POST /api/laporan/:id/selesai — Upload bukti & set selesai (ADMIN/PETUGAS)
 router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -270,4 +254,3 @@ router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res
 });
 
 export default router;
->>>>>>> Panji_Branch

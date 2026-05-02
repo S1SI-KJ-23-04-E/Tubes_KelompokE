@@ -38,56 +38,45 @@ export default function LaporanList() {
   const { user, profile, loading: authLoading } = useAuth();
   
   const isAdmin = profile?.role === 'kecamatan' || profile?.role === 'petugas' || profile?.role === 'super_admin';
+  const canModerate = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || (isAdmin ? 'masuk' : 'daftar'));
+  const adminTabs = new Set(['masuk', 'semua']);
 
-  const initialLoadDoneRef = React.useRef(false);
+  const resolvedAdminTab = adminTabs.has(activeTab) ? activeTab : 'masuk';
 
   useEffect(() => {
-    if (profile && isAdmin && activeTab === 'daftar') setActiveTab('masuk');
+    if (!isAdmin) return;
+    if (!adminTabs.has(activeTab)) {
+      setActiveTab(searchParams.get('tab') === 'semua' ? 'semua' : 'masuk');
+    }
   }, [profile, isAdmin]);
 
-  // Initial data load — only once when auth is ready
   useEffect(() => {
-    if (authLoading || initialLoadDoneRef.current) return;
-    initialLoadDoneRef.current = true;
+    if (authLoading || !user || !profile) return;
     loadData();
-    
-    // Untuk warga biasa: setup realtime listener + polling fallback
-    if (!isAdmin && user) {
-      // Realtime listener
+
+    if (!isAdmin) {
       const subscription = supabase
         .channel('laporan_changes')
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'laporan'
-        }, (payload) => {
-          console.log('Laporan changed (realtime):', payload);
+        }, () => {
           loadData();
         })
         .subscribe();
-      
-      // Polling fallback - refresh setiap 30 detik
+
       const pollInterval = setInterval(() => {
-        console.log('Polling laporan...');
         loadData();
       }, 30000);
-      
+
       return () => {
         subscription.unsubscribe();
         clearInterval(pollInterval);
       };
     }
-  }, [authLoading]);
-
-  // Re-fetch when search query changes (debounced) or tab changes
-  useEffect(() => {
-    if (authLoading || !initialLoadDoneRef.current) return;
-    const delayDebounceFn = setTimeout(() => {
-      loadData();
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, activeTab]);
+  }, [authLoading, user, profile, isAdmin, activeTab, searchQuery]);
 
   const loadData = async () => {
     setLoading(true);
@@ -99,7 +88,7 @@ export default function LaporanList() {
         
         // Tentukan endpoint berdasarkan tab
         let endpoint;
-        if (activeTab === 'semua' || !kecamatanId) {
+        if (resolvedAdminTab === 'semua' || !kecamatanId) {
           // Tab "Semua Laporan" atau jika tidak punya kecamatan_id
           endpoint = `${API_URL}/admin/laporan/semua?search=${searchQuery}`;
         } else {
@@ -107,12 +96,38 @@ export default function LaporanList() {
           endpoint = `${API_URL}/admin/laporan/kecamatan/${kecamatanId}?search=${searchQuery}`;
         }
         
-        const res = await fetch(endpoint, {
-          headers: { 'Authorization': `Bearer ${session?.access_token}` }
-        });
-        const json = await res.json();
-        console.log('Admin laporan response:', json);
-        if (json.success) setLaporanMasuk(json.data || []);
+        try {
+          const res = await fetch(endpoint, {
+            headers: { 'Authorization': `Bearer ${session?.access_token}` }
+          });
+
+          if (!res.ok) {
+            throw new Error(`Admin API gagal (${res.status})`);
+          }
+
+          const json = await res.json();
+          console.log('Admin laporan response:', json);
+          if (!json?.success) {
+            throw new Error(json?.error || 'Admin API tidak mengembalikan success=true');
+          }
+
+          setLaporanMasuk(json.data || []);
+        } catch (apiErr) {
+          // Fallback: gunakan query langsung dari client agar list tetap tampil saat backend admin tidak aktif/unauthorized.
+          console.warn('Admin API failed, fallback to client query:', apiErr?.message || apiErr);
+          const fallbackRes = await getAllLaporan();
+          if (fallbackRes.success) {
+            const fallbackData = fallbackRes.data || [];
+            if (resolvedAdminTab === 'semua' || !kecamatanId) {
+              setLaporanMasuk(fallbackData);
+            } else {
+              const scoped = fallbackData.filter((item) => String(item.kecamatan_id) === String(kecamatanId));
+              setLaporanMasuk(scoped);
+            }
+          } else {
+            setLaporanMasuk([]);
+          }
+        }
       } else {
         // Load laporan publik and laporan saya (if logged-in) and filter robustly
         const feedRes = await getAllLaporan();
@@ -181,7 +196,7 @@ export default function LaporanList() {
       <main className="flex-1 min-w-0 p-6 md:p-10 animate-fade-in-up">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex-1">
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight transition-colors">{isAdmin ? (activeTab === 'masuk' ? 'Laporan Masuk' : 'Daftar Laporan') : 'Laporan Publik'}</h1>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight transition-colors">{isAdmin ? (resolvedAdminTab === 'semua' ? 'Semua Laporan' : 'Laporan Masuk') : 'Laporan Publik'}</h1>
             <p className="text-slate-500 text-sm mt-1 font-medium transition-colors">{isAdmin ? `Kecamatan ${profile?.kecamatan?.nama_kecamatan || ''}` : 'Pantau infrastruktur kota Anda'}</p>
           </div>
 
@@ -200,7 +215,7 @@ export default function LaporanList() {
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
           isAdmin ? (
-            <AdminView laporan={activeTab === 'masuk' ? (laporanMasuk || []).filter(l => l.status !== 'selesai' && l.status !== 'rejected') : (laporanMasuk || [])} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} />
+            <AdminView laporan={laporanMasuk || []} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} />
           ) : (
             activeTab === 'daftar' ? <DaftarWargaView laporan={laporanPublik} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
           )
@@ -210,7 +225,7 @@ export default function LaporanList() {
   );
 }
 
-function AdminView({ laporan, onStatus, onPriority }) {
+function AdminView({ laporan, onStatus, onPriority, profile }) {
   if (!laporan || laporan.length === 0) return <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm"><Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" /><p className="font-medium">Tidak ada laporan.</p></div>;
   
   return (
@@ -219,6 +234,11 @@ function AdminView({ laporan, onStatus, onPriority }) {
         // PERBAIKAN: Default ke 'low' jika kosong, dan hapus 'normal'
         const priorityVal = (item.prioritas || 'low').toLowerCase();
         const finalPriority = (priorityVal === 'high' || priorityVal === 'low') ? priorityVal : 'low';
+        const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
+        const itemKecamatanId = item.kecamatan_id || item.kecamatan?.id;
+        const sameKecamatan = String(userKecamatanId || '') === String(itemKecamatanId || '');
+        const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
+        const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
         
         const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
         const pCfg = PRIORITY_CONFIG[finalPriority];
@@ -257,10 +277,10 @@ function AdminView({ laporan, onStatus, onPriority }) {
 
                <div className="flex flex-col gap-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1 transition-colors"><Clock size={12}/> Update Status</p>
-                  {item.status === 'pending' && <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all duration-300 btn-hover-lift active:scale-95">Verifikasi Laporan</button>}
-                  {(item.status === 'verified' || item.status === 'pending') && <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all duration-300 btn-hover-lift active:scale-95">Mulai Perbaikan</button>}
-                  {item.status === 'in_progress' && <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all duration-300 btn-hover-lift active:scale-95">Tandai Selesai</button>}
-                  <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all duration-300">Tolak Laporan</button>
+                  {canModerate && item.status === 'pending' && <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all duration-300 btn-hover-lift active:scale-95">Verifikasi Laporan</button>}
+                  {canWorkAction && (item.status === 'verified' || item.status === 'pending') && <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all duration-300 btn-hover-lift active:scale-95">Mulai Perbaikan</button>}
+                  {canWorkAction && item.status === 'in_progress' && <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all duration-300 btn-hover-lift active:scale-95">Tandai Selesai</button>}
+                  {canModerate && <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all duration-300">Tolak Laporan</button>}
                </div>
             </div>
           </div>

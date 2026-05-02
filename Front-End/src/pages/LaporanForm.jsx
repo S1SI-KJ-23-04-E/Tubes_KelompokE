@@ -119,28 +119,16 @@ export default function LaporanForm() {
       {/* Main Card */}
       <div className="bg-white rounded-lg shadow-lg border border-slate-100 overflow-hidden animate-scale-in hover:shadow-xl transition-shadow duration-300">
         <form onSubmit={handleSubmit} className="p-8 md:p-10">
-          
-<<<<<<< HEAD
-          <div className="mb-8 border-b border-slate-100 pb-6 animate-fade-in-up">
-            <h1 className="text-2xl font-bold text-[#1e3a8a] mb-2 transition-colors">Formulir Laporan Kerusakan</h1>
-            <p className="text-slate-500 text-sm transition-colors">Lengkapi informasi berikut untuk membuat laporan kerusakan infrastruktur</p>
-=======
           <div className="mb-8 border-b border-slate-100 pb-6">
             <h1 className="text-2xl font-bold text-[#1e3a8a] mb-2">Formulir Laporan Kerusakan</h1>
             <p className="text-slate-500 text-sm">Lengkapi informasi berikut untuk membuat laporan kerusakan infrastruktur</p>
             <p className="text-xs text-slate-500 mt-2">Field dengan tanda <span className="text-red-500">*</span> wajib diisi.</p>
->>>>>>> Panji_Branch
           </div>
 
           <div className="space-y-6">
             {/* Alamat */}
-<<<<<<< HEAD
-            <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Alamat Lokasi</label>
-=======
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Alamat Lokasi <span className="text-red-500">*</span></label>
->>>>>>> Panji_Branch
               <input 
                 type="text" 
                 required
@@ -153,13 +141,8 @@ export default function LaporanForm() {
 
             {/* Kecamatan & Kelurahan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-<<<<<<< HEAD
-              <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Kecamatan</label>
-=======
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Kecamatan <span className="text-red-500">*</span></label>
->>>>>>> Panji_Branch
                 <Select 
                   options={kecamatans}
                   placeholder="Pilih Kecamatan"
@@ -173,13 +156,8 @@ export default function LaporanForm() {
                 />
               </div>
 
-<<<<<<< HEAD
-              <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Kelurahan</label>
-=======
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Kelurahan <span className="text-red-500">*</span></label>
->>>>>>> Panji_Branch
                 <Select 
                   options={kelurahans}
                   placeholder="Pilih Kelurahan Dulu"
@@ -196,13 +174,8 @@ export default function LaporanForm() {
             </div>
 
             {/* Deskripsi */}
-<<<<<<< HEAD
-            <div className="animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan</label>
-=======
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan <span className="text-red-500">*</span></label>
->>>>>>> Panji_Branch
               <textarea 
                 required
                 maxLength={500}
