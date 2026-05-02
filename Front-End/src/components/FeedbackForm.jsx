@@ -1,45 +1,70 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-export default function FeedbackForm({ laporanId, onSubmitted }) {
+export default function FeedbackForm({ laporanId, onSubmitted, currentUserId, canSubmit = true }) {
   const [rating, setRating] = useState(0);
   const [ulasan, setUlasan] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canSubmit) return alert('Hanya pelapor yang dapat mengirim feedback.');
+    if (!currentUserId) return alert('Anda harus login untuk mengirim feedback.');
     if (rating === 0) return alert('Pilih rating 1-5');
 
     setLoading(true);
     try {
+      const { data: existing, error: existingError } = await supabase
+        .from('feedback')
+        .select('id, user_id')
+        .eq('laporan_id', laporanId)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (existing) {
+        if (String(existing.user_id || '') === String(currentUserId || '')) {
+          alert('Feedback untuk laporan ini sudah pernah Anda kirim.');
+        } else {
+          alert('Feedback untuk laporan ini sudah tersedia.');
+        }
+        return;
+      }
+
       const { error } = await supabase.from('feedback').insert([{
         laporan_id: laporanId,
         rating,
         ulasan,
-        user_id: '00000000-0000-0000-0000-000000000000' // Mock user
+        user_id: currentUserId
       }]);
       if (error) throw error;
+      setRating(0);
+      setUlasan('');
       onSubmitted();
     } catch (err) {
-      alert('Gagal mengirim feedback');
+      const message =
+        err?.code === '23505'
+          ? 'Feedback untuk laporan ini sudah tersedia.'
+          : (err?.message || 'Gagal mengirim feedback');
+      alert(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mt-8">
-      <h4 className="font-bold text-gray-800 mb-2">Beri Penilaian</h4>
-      <p className="text-sm text-gray-500 mb-4">Seberapa puas Anda dengan penyelesaian laporan ini?</p>
+    <div className="bg-gradient-to-br from-slate-50 to-indigo-50 p-6 rounded-2xl border border-slate-200 mt-8 animate-fade-in-up shadow-sm hover:shadow-md transition-shadow duration-300 card-hover">
+      <h4 className="font-bold text-gray-800 mb-2 transition-colors">Beri Penilaian</h4>
+      <p className="text-sm text-gray-500 mb-4 transition-colors">Seberapa puas Anda dengan penyelesaian laporan ini?</p>
       
       <form onSubmit={handleSubmit}>
         <div className="flex space-x-2 mb-4">
-          {[1,2,3,4,5].map(star => (
+          {[1,2,3,4,5].map((star, idx) => (
             <button
               type="button"
               key={star}
               onClick={() => setRating(star)}
-              className={`text-3xl transition-transform hover:scale-110 ${rating >= star ? 'text-yellow-400 drop-shadow-sm' : 'text-gray-300 hover:text-yellow-200'}`}
+              className={`text-3xl transition-all duration-300 hover:scale-125 animate-fade-in ${rating >= star ? 'text-yellow-400 drop-shadow-sm animate-bounce-in' : 'text-gray-300 hover:text-yellow-200'}`}
+              style={{ animationDelay: `${idx * 50}ms` }}
             >
               ★
             </button>
@@ -48,18 +73,30 @@ export default function FeedbackForm({ laporanId, onSubmitted }) {
         <textarea 
           required
           placeholder="Tulis ulasan pengalaman Anda..."
-          className="w-full border-0 ring-1 ring-slate-200 rounded-xl p-4 text-sm mb-4 bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
+          className="w-full border-0 ring-1 ring-slate-200 rounded-xl p-4 text-sm mb-4 bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm input-focus-animate hover:ring-slate-300"
           rows="3"
           value={ulasan}
           onChange={e => setUlasan(e.target.value)}
+          disabled={!canSubmit || loading}
         />
         <button 
-          disabled={loading}
+          disabled={loading || !canSubmit || !currentUserId}
           type="submit"
-          className="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-xl text-sm disabled:opacity-50 hover:bg-indigo-700 transition-colors w-full sm:w-auto shadow-md shadow-indigo-200"
+          className="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-xl text-sm disabled:opacity-50 hover:bg-indigo-700 transition-all duration-300 w-full sm:w-auto shadow-md shadow-indigo-200 btn-hover-lift active:scale-95 flex items-center justify-center"
         >
-          {loading ? 'Mengirim...' : 'Kirim Feedback'}
+          {loading ? (
+            <>
+              <svg className="h-4 w-4 mr-2 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Mengirim...
+            </>
+          ) : 'Kirim Feedback'}
         </button>
+        {!canSubmit && (
+          <p className="text-xs text-slate-500 mt-3">Feedback hanya dapat dikirim oleh pelapor laporan ini.</p>
+        )}
       </form>
     </div>
   );

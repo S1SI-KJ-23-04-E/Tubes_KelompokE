@@ -1,28 +1,59 @@
-﻿import express from 'express';
-import cors from 'cors';
 import 'dotenv/config';
-import laporanRouter from './routes/laporan.js';
-import wilayahRouter from './routes/wilayah.js';
-import adminRouter from './routes/admin.js';
+import express from 'express';
+import cors from 'cors';
+
+import wilayahRoutes from './routes/wilayah.js';
+import laporanRoutes from './routes/laporan.js';
+import adminRoutes from './routes/admin.js';
+import profileRoutes from './routes/profile.js';
 
 const app = express();
-const PORT = process.env.PORT || 7777;
+const PORT = process.env.PORT || 8001;
 
-app.use(cors());
+// ✅ CORS
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
+
+// ✅ Middleware
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.json({ success: true, message: 'Backend berjalan' });
+// ✅ Debug log
+app.use((req, res, next) => {
+  console.log(`➡️ ${req.method} ${req.url}`);
+  next();
 });
 
-app.use('/api/laporan', laporanRouter);
-app.use('/api', wilayahRouter);
-app.use('/api/admin', adminRouter);
+// ✅ Routes
+app.use('/api/wilayah', wilayahRoutes);
+app.use('/api/laporan', laporanRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/profile', profileRoutes);
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString()
+  });
+});
 
 app.use((req, res) => {
-  res.status(404).json({ success: false, error: 'Endpoint tidak ditemukan' });
+  res.status(404).json({ error: 'Route tidak ditemukan' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
+app.use((err, req, res, next) => {
+  console.error('🔥 Server Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+const server = app.listen(PORT, () => {
+  console.log(`✅ Server running di http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} sedang dipakai.`);
+    process.exit(1);
+  }
 });
