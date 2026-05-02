@@ -34,19 +34,11 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 relative group h-full flex flex-col card-hover animate-fade-in-up hover:border-indigo-200">
       {!minimal && (
-<<<<<<< HEAD
-        <div className="flex justify-between items-start mb-3 animate-fade-in">
-          <span className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${statusColors[status] || 'bg-gray-100'} status-breathing`}>
-            {status.replace('_', ' ').toUpperCase()}
-          </span>
-          <span className="text-xs text-gray-400 transition-all group-hover:text-indigo-400">{date}</span>
-=======
         <div className="flex justify-between items-start mb-3">
-          <span className={`text-xs font-bold px-3 py-1 rounded-full ${statusColors[safeStatus] || 'bg-gray-100'}`}>
+          <span className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${statusColors[safeStatus] || 'bg-gray-100'} status-breathing`}>
             {safeStatus.replace('_', ' ').toUpperCase()}
           </span>
-          <span className="text-xs text-gray-400">{dateLabel}</span>
->>>>>>> Panji_Branch
+          <span className="text-xs text-gray-400 transition-all group-hover:text-indigo-400">{dateLabel}</span>
         </div>
       )}
       
@@ -65,11 +57,7 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
             👍 {upvote_count || 0} Upvotes
           </div>
         ) : (
-<<<<<<< HEAD
-          <span className="text-[10px] text-gray-400 italic transition-colors">{date}</span>
-=======
           <span className="text-[10px] text-gray-400 italic">Dibuat pada {dateLabel}</span>
->>>>>>> Panji_Branch
         )}
         
         <div className="flex space-x-2">

@@ -150,8 +150,25 @@ router.put('/laporan/:id/status', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-<<<<<<< HEAD
-=======
+// POST /api/admin/laporan/:id/kendala
+router.post('/laporan/:id/kendala', authenticate, async (req, res) => {
+  const { deskripsi } = req.body;
+  const userId = req.user.id;
+  const laporanId = req.params.id;
+
+  const { error } = await supabaseAdmin
+    .from('kendala_laporan')
+    .insert({
+      laporan_id: laporanId,
+      petugas_id: userId,
+      deskripsi: deskripsi,
+      created_at: new Date().toISOString()
+    });
+
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true });
+});
+
 // GET /api/admin/laporan/semua
 router.get('/laporan/semua', authenticate, async (req, res) => {
   const { search } = req.query;
@@ -184,5 +201,4 @@ router.get('/laporan/semua', authenticate, async (req, res) => {
   res.json({ success: true, data: sortedData });
 });
 
->>>>>>> Panji_Branch
 export default router;
