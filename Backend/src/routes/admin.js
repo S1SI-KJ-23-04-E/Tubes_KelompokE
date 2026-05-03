@@ -13,7 +13,7 @@ router.get('/laporan/all', authenticate, async (req, res) => {
     .select(`*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), profiles:pelapor_id(id, nama)`);
 
   if (search) {
-    query = query.or(`deskripsi.ilike.%${search}%,alamat.ilike.%${search}%`);
+    query = query.or(`judul.ilike.%${search}%,alamat.ilike.%${search}%`);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -41,7 +41,7 @@ router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => 
     .eq('kecamatan_id', req.params.kecamatanId);
 
   if (search) {
-    query = query.or(`deskripsi.ilike.%${search}%,alamat.ilike.%${search}%`);
+    query = query.or(`judul.ilike.%${search}%,alamat.ilike.%${search}%`);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -178,7 +178,7 @@ router.get('/laporan/semua', authenticate, async (req, res) => {
     .select(`*, kecamatan:kecamatan_id(id, nama_kecamatan), kelurahan:kelurahan_id(id, nama_kelurahan), profiles:pelapor_id(id, nama)`);
 
   if (search) {
-    query = query.or(`deskripsi.ilike.%${search}%,alamat.ilike.%${search}%`);
+    query = query.or(`judul.ilike.%${search}%,alamat.ilike.%${search}%`);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });

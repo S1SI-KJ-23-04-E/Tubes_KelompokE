@@ -43,7 +43,7 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
       )}
       
       <h3 className={`font-semibold text-gray-800 line-clamp-2 mb-2 transition-colors duration-300 group-hover:text-indigo-600 ${minimal ? 'text-base' : 'text-sm'}`}>
-        {deskripsi}
+        {laporan.judul || deskripsi}
       </h3>
       
       <p className="text-xs text-gray-500 mb-4 flex items-start transition-colors group-hover:text-gray-600">
