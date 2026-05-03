@@ -144,9 +144,19 @@ export async function getLaporanById(id) {
     if (!fError) feedback = fData || [];
     else console.warn('feedback fetch warning:', fError.message);
 
+    // Fetch kendala — graceful
+    let kendala = [];
+    const { data: kData, error: kError } = await supabase
+      .from('kendala_laporan')
+      .select('*')
+      .eq('laporan_id', id)
+      .order('created_at', { ascending: false });
+    if (!kError) kendala = kData || [];
+    else console.warn('kendala_laporan fetch warning:', kError.message);
+
     return {
       success: true,
-      data: { ...data, history, bukti, feedback }
+      data: { ...data, history, bukti, feedback, kendala }
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
@@ -351,13 +361,42 @@ export async function tolakLaporan(id, keterangan = '') {
   return updateLaporanStatus(id, 'rejected', null, keterangan);
 }
 
-export const createKendala = async (laporan_id, deskripsi) => {
-  const { data, error } = await supabase
-    .from('kendala_laporan')
-    .insert([{ laporan_id, deskripsi }]);
+export async function getKendalaByLaporan(laporanId) {
+  try {
+    const { data, error } = await supabase
+      .from('kendala_laporan')
+      .select('*')
+      .eq('laporan_id', laporanId)
+      .order('created_at', { ascending: false });
 
-  return { data, error };
-};
+    if (error) throw error;
+    return { success: true, data: data || [] };
+  } catch (error) {
+    console.error('Error fetching kendala:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+export async function createKendala(laporanId, deskripsi) {
+  try {
+    const userId = await getCurrentUserId();
+    
+    const { data, error } = await supabase
+      .from('kendala_laporan')
+      .insert([{ 
+        laporan_id: laporanId, 
+        deskripsi,
+        petugas_id: userId
+      }])
+      .select();
+
+    if (error) throw error;
+    return { success: true, data: data };
+  } catch (error) {
+    console.error('Error creating kendala:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 export async function upvoteLaporan(laporanId) {
   try {
