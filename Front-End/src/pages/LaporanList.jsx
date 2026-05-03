@@ -9,7 +9,7 @@ import {
 } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
-import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe } from 'lucide-react';
+import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -43,14 +43,14 @@ export default function LaporanList() {
   const isAdmin = profile?.role === 'kecamatan' || profile?.role === 'petugas' || profile?.role === 'super_admin';
   const canModerate = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || (isAdmin ? 'masuk' : 'buat'));
-  const adminTabs = new Set(['masuk', 'semua']);
+  const adminTabs = new Set(['masuk', 'progress', 'selesai']);
 
   const resolvedAdminTab = adminTabs.has(activeTab) ? activeTab : 'masuk';
 
   useEffect(() => {
     if (!isAdmin) return;
     if (!adminTabs.has(activeTab)) {
-      setActiveTab(searchParams.get('tab') === 'semua' ? 'semua' : 'masuk');
+      setActiveTab('masuk');
     }
   }, [profile, isAdmin]);
 
@@ -90,7 +90,7 @@ export default function LaporanList() {
         const { data: { session } } = await supabase.auth.getSession();
         
         let endpoint;
-        if (resolvedAdminTab === 'semua' || !kecamatanId) {
+        if (!kecamatanId) {
           endpoint = `${API_URL}/admin/laporan/semua?search=${searchQuery}`;
         } else {
           endpoint = `${API_URL}/admin/laporan/kecamatan/${kecamatanId}?search=${searchQuery}`;
@@ -113,7 +113,7 @@ export default function LaporanList() {
           const fallbackRes = await getAllLaporan();
           if (fallbackRes.success) {
             const fallbackData = fallbackRes.data || [];
-            if (resolvedAdminTab === 'semua' || !kecamatanId) {
+            if (!kecamatanId) {
               setLaporanMasuk(fallbackData);
             } else {
               const scoped = fallbackData.filter((item) => String(item.kecamatan_id) === String(kecamatanId));
@@ -180,13 +180,18 @@ export default function LaporanList() {
   ];
   const adminTabsList = [
     { id: 'masuk', label: 'Laporan Masuk', icon: Inbox },
-    { id: 'semua', label: 'Semua Laporan', icon: List },
+    { id: 'progress', label: 'Laporan Progress', icon: Activity },
+    { id: 'selesai', label: 'Laporan Selesai', icon: CheckCircle2 },
   ];
 
   const tabs = isAdmin ? adminTabsList : wargaTabs;
 
   const getPageTitle = () => {
-    if (isAdmin) return resolvedAdminTab === 'semua' ? 'Semua Laporan' : 'Laporan Masuk';
+    if (isAdmin) {
+       if (resolvedAdminTab === 'masuk') return 'Laporan Masuk';
+       if (resolvedAdminTab === 'progress') return 'Laporan Progress';
+       if (resolvedAdminTab === 'selesai') return 'Laporan Selesai';
+    }
     if (activeTab === 'buat') return 'Buat Laporan Baru';
     if (activeTab === 'history') return 'History Laporan Saya';
     return 'Laporan Publik';
@@ -268,7 +273,7 @@ export default function LaporanList() {
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
           isAdmin ? (
-            <AdminView laporan={laporanMasuk || []} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} />
+            <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} />
           ) : (
             activeTab === 'publik' ? <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
           )
@@ -302,12 +307,19 @@ function InlineLaporanRedirect() {
   );
 }
 
-function AdminView({ laporan, onStatus, onPriority, profile }) {
-  if (!laporan || laporan.length === 0) return <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm"><Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" /><p className="font-medium">Tidak ada laporan.</p></div>;
+function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
+  const filteredLaporan = laporan.filter(item => {
+    if (activeTab === 'masuk') return item.status === 'pending';
+    if (activeTab === 'progress') return ['verified', 'in_progress'].includes(item.status);
+    if (activeTab === 'selesai') return ['done', 'selesai', 'rejected'].includes(item.status);
+    return false;
+  });
+
+  if (!filteredLaporan || filteredLaporan.length === 0) return <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm"><Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" /><p className="font-medium">Tidak ada laporan di kategori ini.</p></div>;
   
   return (
     <div className="space-y-5">
-      {laporan.map((item, idx) => {
+      {filteredLaporan.map((item, idx) => {
         const priorityVal = (item.prioritas || 'low').toLowerCase();
         const finalPriority = (priorityVal === 'high' || priorityVal === 'low') ? priorityVal : 'low';
         const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
