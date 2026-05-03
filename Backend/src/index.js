@@ -5,30 +5,55 @@ import cors from 'cors';
 import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
+import profileRoutes from './routes/profile.js';
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8001;
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'] }));
+// ✅ CORS
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
+
+// ✅ Middleware
 app.use(express.json());
 
-// Routes
-app.use('/api', wilayahRoutes);
+// ✅ Debug log
+app.use((req, res, next) => {
+  console.log(`➡️ ${req.method} ${req.url}`);
+  next();
+});
+
+// ✅ Routes
+app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/profile', profileRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString()
+  });
+});
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route tidak ditemukan' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('🔥 Server Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 const server = app.listen(PORT, () => {
-  console.log(`✅ Express server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running di http://localhost:${PORT}`);
 });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} sudah dipakai proses lain.`);
-    console.error(`   Jalankan perintah ini untuk membebaskan port:`);
-    console.error(`   Get-NetTCPConnection -LocalPort ${PORT} -State Listen | Select-Object -ExpandProperty OwningProcess | ForEach-Object { taskkill /PID $_ /F }`);
+    console.error(`❌ Port ${PORT} sedang dipakai.`);
     process.exit(1);
   }
 });

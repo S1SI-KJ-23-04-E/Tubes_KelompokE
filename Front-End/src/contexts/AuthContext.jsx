@@ -9,6 +9,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const profileCache = useRef(null);
 
+  const withTimeout = useCallback((promise, ms = 3000) => {
+    return Promise.race([
+      promise,
+      new Promise((resolve) => setTimeout(() => resolve(null), ms))
+    ]);
+  }, []);
+
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) return null;
     // Return cached profile if already fetched for this user
@@ -18,7 +25,7 @@ export function AuthProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, kecamatan(nama_kecamatan)')
+        .select('*, kecamatan(id, nama_kecamatan)')
         .eq('id', userId)
         .single();
       if (error) {
@@ -35,16 +42,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let active = true;
+    const safetyTimer = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 1200);
 
     // Initialize from LOCAL cached session — no network call
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const sessionResult = await withTimeout(supabase.auth.getSession(), 3000);
+        const session = sessionResult?.data?.session ?? null;
         if (!active) return;
         if (session?.user) {
           setUser(session.user);
-          const prof = await fetchProfile(session.user.id);
-          if (active) setProfile(prof);
+          fetchProfile(session.user.id).then((prof) => {
+            if (active) setProfile(prof);
+          });
         }
       } catch (err) {
         console.warn('Session init error:', err);
@@ -83,6 +95,7 @@ export function AuthProvider({ children }) {
 
     return () => {
       active = false;
+      clearTimeout(safetyTimer);
       subscription?.unsubscribe();
     };
   }, [fetchProfile]);
@@ -123,7 +136,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, login, register, logout }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

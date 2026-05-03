@@ -89,13 +89,10 @@ export default function LaporanList() {
         console.log('Admin loading - role:', profile?.role, 'kecamatanId:', kecamatanId, 'activeTab:', activeTab);
         const { data: { session } } = await supabase.auth.getSession();
         
-        // Tentukan endpoint berdasarkan tab
         let endpoint;
         if (resolvedAdminTab === 'semua' || !kecamatanId) {
-          // Tab "Semua Laporan" atau jika tidak punya kecamatan_id
           endpoint = `${API_URL}/admin/laporan/semua?search=${searchQuery}`;
         } else {
-          // Tab "Laporan Masuk" 
           endpoint = `${API_URL}/admin/laporan/kecamatan/${kecamatanId}?search=${searchQuery}`;
         }
         
@@ -104,19 +101,14 @@ export default function LaporanList() {
             headers: { 'Authorization': `Bearer ${session?.access_token}` }
           });
 
-          if (!res.ok) {
-            throw new Error(`Admin API gagal (${res.status})`);
-          }
+          if (!res.ok) throw new Error(`Admin API gagal (${res.status})`);
 
           const json = await res.json();
           console.log('Admin laporan response:', json);
-          if (!json?.success) {
-            throw new Error(json?.error || 'Admin API tidak mengembalikan success=true');
-          }
+          if (!json?.success) throw new Error(json?.error || 'Admin API tidak mengembalikan success=true');
 
           setLaporanMasuk(json.data || []);
         } catch (apiErr) {
-          // Fallback: gunakan query langsung dari client agar list tetap tampil saat backend admin tidak aktif/unauthorized.
           console.warn('Admin API failed, fallback to client query:', apiErr?.message || apiErr);
           const fallbackRes = await getAllLaporan();
           if (fallbackRes.success) {
@@ -135,9 +127,7 @@ export default function LaporanList() {
         // Load laporan publik (exclude current user) and laporan saya
         const feedRes = await getAllLaporan(user?.id);
         console.debug('DEBUG feedRes count:', (feedRes.data || []).length, 'success:', feedRes.success);
-        console.debug('DEBUG current user id:', user?.id);
 
-        // Log sample pelapor_id values to help diagnose
         if (feedRes.success && Array.isArray(feedRes.data)) {
           console.debug('DEBUG sample pelapor_ids:', feedRes.data.slice(0,8).map(i => ({ id: i.id, pelapor_id: i.pelapor_id, profiles_id: i.profiles?.id, t: typeof i.pelapor_id })));
         }
@@ -183,7 +173,6 @@ export default function LaporanList() {
 
   if (authLoading) return <div className="p-20 text-center text-slate-400 font-bold">Memuat...</div>;
 
-  // Sidebar tabs config for warga: Buat Laporan (top), History Saya, Laporan Publik (bottom)
   const wargaTabs = [
     { id: 'buat', label: 'Buat Laporan', icon: PenSquare },
     { id: 'history', label: 'History Saya', icon: Clock },
@@ -196,7 +185,6 @@ export default function LaporanList() {
 
   const tabs = isAdmin ? adminTabsList : wargaTabs;
 
-  // Page title & subtitle logic
   const getPageTitle = () => {
     if (isAdmin) return resolvedAdminTab === 'semua' ? 'Semua Laporan' : 'Laporan Masuk';
     if (activeTab === 'buat') return 'Buat Laporan Baru';
@@ -213,10 +201,7 @@ export default function LaporanList() {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 animate-fade-in">
       {/* Sidebar */}
-      <aside 
-        className={`shrink-0 bg-white border-r border-slate-100 pt-6 flex flex-col shadow-sm animate-slide-in-left transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-64 px-4' : 'w-[68px] px-2'}`}
-      >
-        {/* Toggle Button */}
+      <aside className={`shrink-0 bg-white border-r border-slate-100 pt-6 flex flex-col shadow-sm animate-slide-in-left transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-64 px-4' : 'w-[68px] px-2'}`}>
         <button
           onClick={() => setSidebarExpanded(!sidebarExpanded)}
           className="flex items-center justify-center w-full mb-4 p-2.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200 active:scale-95"
@@ -225,14 +210,12 @@ export default function LaporanList() {
           {sidebarExpanded ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
         </button>
 
-        {/* Section Label */}
         {sidebarExpanded && (
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-3 animate-fade-in">
             {isAdmin ? 'Admin Panel' : 'Navigasi'}
           </p>
         )}
 
-        {/* Tab Buttons */}
         <div className="flex flex-col gap-1">
           {tabs.map((t, idx) => (
             <button
@@ -255,7 +238,6 @@ export default function LaporanList() {
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 p-6 md:p-10 animate-fade-in-up">
-        {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex-1">
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight transition-colors">{getPageTitle()}</h1>
@@ -278,7 +260,6 @@ export default function LaporanList() {
           </div>
         </div>
 
-        {/* Content */}
         {activeTab === 'buat' && !isAdmin ? (
           <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
             <InlineLaporanRedirect />
@@ -297,10 +278,8 @@ export default function LaporanList() {
   );
 }
 
-/* Inline redirect to form — renders the LaporanForm page directly via navigate */
 function InlineLaporanRedirect() {
   const navigate = useNavigate();
-
   return (
     <div className="flex flex-col items-center justify-center py-16 animate-fade-in-up">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-10 max-w-lg w-full text-center hover:shadow-xl transition-all duration-300">
@@ -329,7 +308,6 @@ function AdminView({ laporan, onStatus, onPriority, profile }) {
   return (
     <div className="space-y-5">
       {laporan.map((item, idx) => {
-        // PERBAIKAN: Default ke 'low' jika kosong, dan hapus 'normal'
         const priorityVal = (item.prioritas || 'low').toLowerCase();
         const finalPriority = (priorityVal === 'high' || priorityVal === 'low') ? priorityVal : 'low';
         const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;

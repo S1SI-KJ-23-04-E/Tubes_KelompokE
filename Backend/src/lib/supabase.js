@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 
 // Admin client (service role) — bypass RLS untuk operasi backend
 export const supabaseAdmin = createClient(
