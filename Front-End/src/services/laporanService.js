@@ -1,5 +1,17 @@
 import { supabase } from '../lib/supabase';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api';
+
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('Unauthorized: token not found');
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 // ===============================
 // GET USER ID (SAFE)
 // ===============================
@@ -255,24 +267,19 @@ export async function uploadFoto(file) {
 // ===============================
 export async function getInformasi(laporanId) {
   try {
-    const { data, error } = await supabase
-      .from('informasi_laporan') // pastikan nama tabel ini sesuai di DB kamu
-      .select(`
-        id,
-        catatan,
-        created_at,
-        profiles ( nama )
-      `)
-      .eq('laporan_id', laporanId)
-      .order('created_at', { ascending: false });
+    const res = await fetch(`${API_BASE_URL}/informasi-tambahan/laporan/${laporanId}`, {
+      headers: await getAuthHeaders(),
+    });
 
-    if (error) throw error;
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Gagal ambil informasi admin');
+    }
 
-    return { success: true, data: data || [] };
-
+    return { success: true, data: data.data || [] };
   } catch (error) {
     console.error('getInformasi error:', error);
-    return { success: false, data: [] };
+    return { success: false, data: [], error: error.message };
   }
 }
 
@@ -281,22 +288,21 @@ export async function getInformasi(laporanId) {
 // ===============================
 export async function tambahInformasi(laporanId, catatan) {
   try {
-    const userId = await getCurrentUserId();
+    const res = await fetch(`${API_BASE_URL}/informasi-tambahan/laporan/${laporanId}`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ catatan }),
+    });
 
-    const { error } = await supabase
-      .from('informasi_laporan') // pastikan nama tabel ini sama
-      .insert([{
-        laporan_id: laporanId,
-        catatan: catatan,
-        created_by: userId
-      }]);
-
-    if (error) throw error;
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || data.message || 'Gagal kirim informasi admin');
+    }
 
     return { success: true };
 
   } catch (error) {
-    console.error('Error updating status:', error);
+    console.error('tambahInformasi error:', error);
     return { success: false, error: error.message };
   }
 }

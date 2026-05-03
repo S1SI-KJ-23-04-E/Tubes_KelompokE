@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { getInformasi, tambahInformasi } from '../services/laporanService';
 
 export default function InformasiAdmin({ laporanId }) {
+  const { profile } = useAuth();
   const [data, setData] = useState([]);
   const [catatan, setCatatan] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const isAdmin = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
 
   useEffect(() => {
     loadData();
@@ -27,6 +31,8 @@ export default function InformasiAdmin({ laporanId }) {
     if (res.success) {
       setCatatan('');
       loadData();
+    } else {
+      alert(res.error || 'Gagal mengirim informasi admin');
     }
 
     setLoading(false);
@@ -53,21 +59,25 @@ export default function InformasiAdmin({ laporanId }) {
       </div>
 
       {/* INPUT */}
-      <div className="flex gap-2">
-        <input
-          value={catatan}
-          onChange={(e) => setCatatan(e.target.value)}
-          placeholder="Tambah catatan..."
-          className="border px-2 py-1 rounded w-full"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="bg-indigo-500 text-white px-3 rounded"
-        >
-          Kirim
-        </button>
-      </div>
+      {isAdmin ? (
+        <div className="flex gap-2">
+          <input
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            placeholder="Tambah catatan..."
+            className="border px-2 py-1 rounded w-full"
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="bg-indigo-500 text-white px-3 rounded"
+          >
+            Kirim
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">Hanya admin kecamatan yang dapat menambahkan informasi tambahan.</p>
+      )}
     </div>
   );
 }
