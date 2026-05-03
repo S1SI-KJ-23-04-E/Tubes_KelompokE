@@ -248,13 +248,13 @@ export default function LaporanList() {
             {isAdmin && (
               <div className="relative flex-1 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors" size={16} />
-                <input type="text" placeholder="Ketik deskripsi atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-80 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <input type="text" placeholder="Cari berdasarkan judul atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-80 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             )}
             {!isAdmin && activeTab === 'publik' && (
               <div className="relative flex-1 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors" size={16} />
-                <input type="text" placeholder="Cari laporan berdasarkan deskripsi, alamat, atau kecamatan..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-96 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={publicSearchQuery} onChange={(e) => setPublicSearchQuery(e.target.value)} />
+                <input type="text" placeholder="Cari laporan berdasarkan judul atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-96 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={publicSearchQuery} onChange={(e) => setPublicSearchQuery(e.target.value)} />
               </div>
             )}
           </div>
@@ -329,7 +329,7 @@ function AdminView({ laporan, onStatus, onPriority, profile }) {
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${cfg.badge} transition-all status-breathing`}>{cfg.label}</span>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider transition-colors">{new Date(item.created_at).toLocaleString('id-ID')}</span>
               </div>
-              <h3 className="font-bold text-slate-900 text-xl mb-1 leading-tight transition-colors hover:text-indigo-600">{item.deskripsi}</h3>
+              <h3 className="font-bold text-slate-900 text-xl mb-1 leading-tight transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h3>
               <p className="text-sm text-slate-500 mb-5 flex items-center gap-1.5 transition-colors">📍 <span className="font-medium">{item.alamat}, {item.kelurahan?.nama_kelurahan}</span></p>
               
               <div className="flex items-center gap-4 border-t border-slate-50 pt-4">
@@ -370,11 +370,9 @@ function DaftarWargaView({ laporan, searchQuery = '' }) {
   const q = searchQuery.toLowerCase().trim();
   const filtered = q
     ? laporan.filter((item) => {
-        const deskripsi = (item.deskripsi || '').toLowerCase();
+        const judul = (item.judul || '').toLowerCase();
         const alamat = (item.alamat || '').toLowerCase();
-        const kelurahan = (item.kelurahan?.nama_kelurahan || '').toLowerCase();
-        const kecamatan = (item.kecamatan?.nama_kecamatan || '').toLowerCase();
-        return deskripsi.includes(q) || alamat.includes(q) || kelurahan.includes(q) || kecamatan.includes(q);
+        return judul.includes(q) || alamat.includes(q);
       })
     : laporan;
 
@@ -412,7 +410,7 @@ function HistoryWargaView({ laporan, onDelete }) {
     <div className="space-y-4">
       {laporan.map((item, idx) => (
         <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 animate-stagger card-hover" style={{ animationDelay: `${idx * 50}ms` }}>
-          <div className="flex-1"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${STATUS_CONFIG[item.status]?.badge}`}>{STATUS_CONFIG[item.status]?.label}</span><h4 className="font-bold text-slate-800 text-lg mt-2 transition-colors hover:text-indigo-600">{item.deskripsi}</h4><p className="text-[12px] text-slate-500 mt-1 transition-colors">📍 {item.alamat}</p></div>
+          <div className="flex-1"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${STATUS_CONFIG[item.status]?.badge}`}>{STATUS_CONFIG[item.status]?.label}</span><h4 className="font-bold text-slate-800 text-lg mt-2 transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h4><p className="text-[12px] text-slate-500 mt-1 transition-colors">📍 {item.alamat}</p></div>
           <div className="flex gap-2">{item.status === 'pending' && <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"><Trash2 size={20} /></button>}<Link to={`/laporan/${item.id}`} className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-xl transition-all duration-200 btn-hover-lift"><ChevronRight size={24} /></Link></div>
         </div>
       ))}

@@ -1,4 +1,4 @@
-﻿import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
@@ -40,6 +40,7 @@ export async function createLaporan(data) {
       .insert([
         {
           pelapor_id: userId, 
+          judul: data.judul,
           kecamatan_id: data.kecamatan_id,
           kelurahan_id: data.kelurahan_id,
           deskripsi: data.deskripsi,

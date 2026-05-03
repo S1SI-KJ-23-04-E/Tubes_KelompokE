@@ -10,6 +10,7 @@ export default function LaporanForm() {
   const [kelurahans, setKelurahans] = useState([]);
   
   const [formData, setFormData] = useState({
+    judul: '',
     kecamatan_id: '',
     kelurahan_id: '',
     deskripsi: '',
@@ -55,9 +56,6 @@ export default function LaporanForm() {
     e.preventDefault();
     if (!formData.kecamatan_id || !formData.kelurahan_id) {
       return alert('Harap pilih Kecamatan dan Kelurahan');
-    }
-    if (formData.deskripsi.length < 20) {
-      return alert('Deskripsi minimal 20 karakter');
     }
     
     setLoading(true);
@@ -126,6 +124,21 @@ export default function LaporanForm() {
           </div>
 
           <div className="space-y-6">
+            {/* Judul */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Judul Laporan <span className="text-red-500">*</span></label>
+              <input 
+                type="text" 
+                required
+                minLength={5}
+                maxLength={100}
+                placeholder="Contoh: Jalan Berlubang di Depan Sekolah"
+                className="w-full bg-[#f8fafc] border border-slate-200 text-slate-700 rounded-md block p-3 text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/30 transition-all input-focus-animate focus:shadow-md hover:border-slate-300"
+                value={formData.judul}
+                onChange={e => setFormData(prev => ({ ...prev, judul: e.target.value }))}
+              />
+            </div>
+
             {/* Alamat */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Alamat Lokasi <span className="text-red-500">*</span></label>
@@ -178,6 +191,7 @@ export default function LaporanForm() {
               <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan <span className="text-red-500">*</span></label>
               <textarea 
                 required
+                minLength={20}
                 maxLength={500}
                 rows={4}
                 placeholder="Jelaskan detail kerusakan yang Anda temukan..."

@@ -204,7 +204,7 @@ export default function LaporanDetail() {
                   Prioritas {priorityCfg.label}
                 </span>
                 <h1 className="text-3xl lg:text-4xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                  {data.alamat}
+                  {data.judul || data.alamat}
                 </h1>
               </div>
 
