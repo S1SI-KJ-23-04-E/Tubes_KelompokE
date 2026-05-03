@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getLaporanById, upvoteLaporan, updateLaporanStatus } from '../services/laporanService';
+import { getLaporanById, upvoteLaporan, updateLaporanStatus, createKendala } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import UploadBuktiModal from '../components/UploadBuktiModal';
+import KendalaForm from '../components/KendalaForm';
 import { 
   ArrowLeft, Clock, MapPin, CheckCircle2, User, 
   ThumbsUp, Building2, MapPinned, AlertTriangle, 
   FileText, ImageIcon, Camera, Star, ChevronRight, Inbox,
   ShieldCheck, ArrowUpCircle, XCircle, Share2, Info,
-  Wrench, Flag, Ban
+  Wrench, Flag, Ban, AlertCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -51,6 +52,8 @@ export default function LaporanDetail() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
+  const [kendalaModalOpen, setKendalaModalOpen] = useState(false);
+  const [kendalaLoading, setKendalaLoading] = useState(false);
 
   const safeStatus = typeof data?.status === 'string' && data.status.trim() ? data.status : 'pending';
   const safeHistoryStatus = (value) => (typeof value === 'string' && value.trim() ? value : 'pending');
@@ -128,6 +131,19 @@ export default function LaporanDetail() {
       loadData();
     } else {
       setUploadError(error || 'Gagal mengirim bukti.');
+    }
+  };
+
+  const handleKendalaSubmit = async (deskripsi) => {
+    setKendalaLoading(true);
+    const { success, error } = await createKendala(id, deskripsi);
+    setKendalaLoading(false);
+
+    if (success) {
+      setKendalaModalOpen(false);
+      loadData();
+    } else {
+      alert('Gagal mengirim kendala: ' + (error || 'Error tidak diketahui'));
     }
   };
 
@@ -349,7 +365,7 @@ export default function LaporanDetail() {
                         </div>
                       )}
                       {canWorkAction && ['verified','in_progress'].includes(data.status) && (
-                        <div className="pt-4">
+                        <div className="pt-4 flex gap-3">
                           <button
                             type="button"
                             onClick={() => setUploadModalOpen(true)}
@@ -357,6 +373,15 @@ export default function LaporanDetail() {
                           >
                             <ArrowUpCircle size={18} /> Upload Bukti
                           </button>
+                          {profile?.role === 'petugas' && data.status === 'in_progress' && (
+                            <button
+                              type="button"
+                              onClick={() => setKendalaModalOpen(true)}
+                              className="inline-flex items-center gap-2 rounded-3xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+                            >
+                              <AlertCircle size={18} /> Lapor Kendala
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -366,6 +391,87 @@ export default function LaporanDetail() {
             </div>
           )}
         </div>
+
+ {data.kendala && (
+  <div className="bg-slate-50 rounded-[2.5rem] shadow-sm border border-slate-200 p-10 lg:p-14 mb-12 relative overflow-hidden">
+    
+    {/* subtle background */}
+    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-200/40 rounded-full blur-3xl -mr-32 -mt-32"></div>
+
+    {/* HEADER */}
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12 relative z-10">
+      <div className="flex items-center gap-5">
+        <div className="w-14 h-14 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-600 shadow-sm">
+          <AlertCircle size={26} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+            Kendala Lapangan
+          </h2>
+          <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mt-1">
+            Hambatan selama pengerjaan
+          </p>
+        </div>
+      </div>
+
+      {/* COUNTER */}
+      <div className="bg-white px-5 py-3 rounded-xl border border-slate-200">
+        <p className="text-xs text-slate-400 font-semibold">Total Kendala</p>
+        <p className="text-xl font-bold text-slate-700">
+          {data.kendala.length}
+        </p>
+      </div>
+    </div>
+
+    {/* LIST */}
+    <div className="relative z-10 grid gap-5">
+      {data.kendala.length > 0 ? (
+        data.kendala.map((kendala) => (
+          <div
+            key={kendala.id}
+            className="group bg-white p-5 rounded-2xl border border-slate-200 hover:shadow-md transition-all duration-200"
+          >
+            <div className="flex items-start gap-4">
+              
+              {/* ICON */}
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
+                <AlertTriangle size={16} />
+              </div>
+
+              <div className="flex-1">
+                {/* LABEL */}
+                <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-md mb-2">
+                  Kendala
+                </span>
+
+                {/* DESKRIPSI */}
+                <p className="text-sm text-slate-700 leading-relaxed mb-2">
+                  {kendala.deskripsi}
+                </p>
+
+                {/* FOOTER */}
+                <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                  <Clock size={12} />
+                  {new Date(kendala.created_at).toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="text-center py-16">
+          <AlertCircle size={40} className="mx-auto text-slate-300 mb-3" />
+          <p className="text-slate-400 text-sm">
+            Belum ada kendala dilaporkan
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+)}
 
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 mb-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -mr-32 -mt-32"></div>
@@ -522,6 +628,20 @@ export default function LaporanDetail() {
           errorMessage={uploadError}
           successMessage={uploadSuccess}
         />
+
+        {kendalaModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+              <div className="p-10">
+                <KendalaForm
+                  onSubmit={handleKendalaSubmit}
+                  onCancel={() => setKendalaModalOpen(false)}
+                  loading={kendalaLoading}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
