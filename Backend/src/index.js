@@ -4,6 +4,7 @@ import cors from 'cors';
 import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
+import informasiTambahanRoutes from './routes/informasi-tambahan.js';
 import profileRoutes from './routes/profile.js';
 
 const app = express();
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
 app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/informasi-tambahan', informasiTambahanRoutes);
 app.use('/api/profile', profileRoutes);
 
 // ✅ Health check
