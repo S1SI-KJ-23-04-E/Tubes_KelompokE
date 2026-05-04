@@ -116,16 +116,6 @@ export default function Login() {
 
           {/* stats */}
           <div className="relative z-10 space-y-3">
-            <div className="flex gap-3">
-              <div className="flex-1 bg-white/8 border border-white/10 rounded-2xl p-4">
-                <p className="text-2xl font-black text-white leading-none">1.2K+</p>
-                <p className="text-indigo-300/60 text-[10px] font-semibold mt-1 uppercase tracking-wider">Laporan Masuk</p>
-              </div>
-              <div className="flex-1 bg-white/8 border border-white/10 rounded-2xl p-4">
-                <p className="text-2xl font-black text-indigo-300 leading-none">94%</p>
-                <p className="text-indigo-300/60 text-[10px] font-semibold mt-1 uppercase tracking-wider">Terselesaikan</p>
-              </div>
-            </div>
             <div className="bg-white/8 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
