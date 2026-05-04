@@ -13,7 +13,12 @@ export const authenticate = async (req, res, next) => {
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
-      return res.status(401).json({ success: false, error: 'Token tidak valid' });
+      console.error('Supabase Auth Error:', error);
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Token tidak valid', 
+        details: error?.message || 'User tidak ditemukan' 
+      });
     }
 
     // Get user profile
