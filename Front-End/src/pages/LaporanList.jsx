@@ -329,6 +329,8 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
         const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
         
         const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+        const isDone = item.status === "done" || item.status === "selesai";
+        const isRejected = item.status === "rejected";
         const pCfg = PRIORITY_CONFIG[finalPriority];
 
         return (
@@ -364,11 +366,51 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
                </div>
 
                <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1 transition-colors"><Clock size={12}/> Update Status</p>
-                  {canModerate && item.status === 'pending' && <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all duration-300 btn-hover-lift active:scale-95">Verifikasi Laporan</button>}
-                  {canWorkAction && (item.status === 'verified' || item.status === 'pending') && <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 hover:font-black py-2.5 rounded-xl text-xs font-bold transition-all duration-300 btn-hover-lift active:scale-95">Mulai Perbaikan</button>}
-                  {canWorkAction && item.status === 'in_progress' && <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black shadow-lg shadow-green-100 transition-all duration-300 btn-hover-lift active:scale-95">Tandai Selesai</button>}
-                  {canModerate && <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all duration-300">Tolak Laporan</button>}
+                  <div className="flex flex-col gap-2">
+  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+    <Clock size={12}/> Update Status
+  </p>
+
+  {/* VERIFIKASI */}
+  {canModerate && item.status === 'pending' && (
+    <button 
+      onClick={() => onStatus(item.id, 'verified')}
+      className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 py-2.5 rounded-xl text-xs font-bold"
+    >
+      Verifikasi Laporan
+    </button>
+  )}
+
+  {/* PROGRESS */}
+  {canWorkAction && (item.status === 'verified' || item.status === 'pending') && (
+    <button 
+      onClick={() => onStatus(item.id, 'in_progress')}
+      className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold"
+    >
+      Mulai Perbaikan
+    </button>
+  )}
+
+  {/* SELESAI */}
+  {canWorkAction && item.status === 'in_progress' && !isRejected && (
+    <button 
+      onClick={() => onStatus(item.id, 'done')}
+      className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black"
+    >
+      Tandai Selesai
+    </button>
+  )}
+
+  {/* TOLAK */}
+  {canModerate && !isDone && !isRejected && (
+  <button 
+    onClick={() => onStatus(item.id, 'rejected')}
+    className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl"
+  >
+    Tolak Laporan
+  </button>
+)}
+</div>
                </div>
             </div>
           </div>
