@@ -1,4 +1,4 @@
-import { Router } from 'express';
+ï»¿import { Router } from 'express';
 import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/laporan — Buat laporan baru
+// POST /api/laporan â€” Buat laporan baru
 router.post('/', authenticate, async (req, res) => {
   const { kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url } = req.body;
   const userId = req.user.id;
@@ -29,7 +29,7 @@ router.post('/', authenticate, async (req, res) => {
   res.json({ success: true, data: [laporan] });
 });
 
-// GET /api/laporan/user — Laporan milik user yang login
+// GET /api/laporan/user â€” Laporan milik user yang login
 router.get('/user', authenticate, async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -41,7 +41,7 @@ router.get('/user', authenticate, async (req, res) => {
   res.json({ success: true, data });
 });
 
-// GET /api/laporan — Semua laporan (public feed)
+// GET /api/laporan â€” Semua laporan (public feed)
 router.get('/', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -57,7 +57,7 @@ router.get('/', async (req, res) => {
   res.json({ success: true, data: data || [] });
 });
 
-// GET /api/laporan/:id — Detail laporan
+// GET /api/laporan/:id â€” Detail laporan
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -77,7 +77,7 @@ router.get('/:id', async (req, res) => {
   res.json({ success: true, data });
 });
 
-// DELETE /api/laporan/:id — Hapus laporan (hanya pending milik sendiri)
+// DELETE /api/laporan/:id â€” Hapus laporan (hanya pending milik sendiri)
 router.delete('/:id', authenticate, async (req, res) => {
   const { error } = await supabaseAdmin
     .from('laporan')
@@ -90,7 +90,7 @@ router.delete('/:id', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-// POST /api/laporan/:id/upvote — Upvote laporan
+// POST /api/laporan/:id/upvote â€” Upvote laporan
 router.post('/:id/upvote', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
@@ -160,7 +160,7 @@ router.post('/:id/upvote', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/laporan/:id/user-upvoted — Check apakah user sudah upvote laporan ini
+// GET /api/laporan/:id/user-upvoted â€” Check apakah user sudah upvote laporan ini
 router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
@@ -183,7 +183,7 @@ router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/laporan/:id/selesai — Upload bukti & set selesai (ADMIN/PETUGAS)
+// POST /api/laporan/:id/selesai â€” Upload bukti & set selesai (ADMIN/PETUGAS)
 router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -253,4 +253,81 @@ router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res
   }
 });
 
+// POST /api/laporan/:id/upvote - Toggle upvote (Bypass RLS via Backend)
+router.post('/:id/upvote', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('upvote')
+      .select('id')
+      .eq('laporan_id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    let upvoted = false;
+    if (existing) {
+      const { error: delError } = await supabaseAdmin
+        .from('upvote')
+        .delete()
+        .eq('id', existing.id);
+      if (delError) throw delError;
+      upvoted = false;
+    } else {
+      const { error: insError } = await supabaseAdmin
+        .from('upvote')
+        .insert([{ laporan_id: id, user_id: userId }]);
+      if (insError) throw insError;
+      upvoted = true;
+    }
+
+    const { data: laporan, error: lapError } = await supabaseAdmin
+      .from('laporan')
+      .select('upvote_count')
+      .eq('id', id)
+      .single();
+
+    if (lapError) throw lapError;
+
+    let newCount = laporan.upvote_count || 0;
+    newCount = upvoted ? newCount + 1 : Math.max(0, newCount - 1);
+
+    const { error: updateError } = await supabaseAdmin
+      .from('laporan')
+      .update({ upvote_count: newCount })
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, upvoted, upvote_count: newCount });
+  } catch (err) {
+    console.error('Upvote error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/laporan/:id/upvote/check - Check status (Bypass RLS via Backend)
+router.get('/:id/upvote/check', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('upvote')
+      .select('id')
+      .eq('laporan_id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json({ success: true, upvoted: !!data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;
+

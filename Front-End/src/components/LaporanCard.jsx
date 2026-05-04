@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ThumbsUp } from 'lucide-react';
+import { upvoteLaporan, checkUserUpvoted } from '../services/laporanService';
+import { useAuth } from '../contexts/AuthContext';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -9,7 +12,14 @@ const statusColors = {
   rejected: 'bg-red-100 text-red-800'
 };
 
-export default function LaporanCard({ laporan, onDelete, minimal = false }) {
+export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal = false }) {
+  const { user, profile } = useAuth();
+  const [laporan, setLaporan] = useState(initialLaporan);
+  const [upvoted, setUpvoted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const isInternalRole = ['petugas', 'kecamatan', 'super_admin'].includes(profile?.role);
+
   const {
     id,
     deskripsi,
@@ -20,6 +30,33 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
     created_at,
     upvote_count
   } = laporan;
+
+  useEffect(() => {
+    if (user && id) {
+      checkInitialUpvote();
+    }
+  }, [user, id]);
+
+  const checkInitialUpvote = async () => {
+    const res = await checkUserUpvoted(id);
+    if (res.success) setUpvoted(res.upvoted);
+  };
+
+  const handleUpvote = async (e) => {
+    e.preventDefault();
+    if (loading || !user) return;
+    
+    setLoading(true);
+    const res = await upvoteLaporan(id);
+    if (res.success) {
+      setUpvoted(res.upvoted);
+      setLaporan(prev => ({ ...prev, upvote_count: res.upvote_count }));
+      if (res.warning) console.warn(res.warning);
+    } else {
+      alert(`Gagal: ${res.error}`);
+    }
+    setLoading(false);
+  };
 
   const safeStatus = typeof status === 'string' && status.trim() ? status : 'pending';
   const safeDate = created_at ? new Date(created_at) : null;
@@ -53,9 +90,25 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
 
       <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50 transition-all">
         {!minimal ? (
-          <div className="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md transition-all group-hover:bg-indigo-50 group-hover:text-indigo-600">
-            👍 {upvote_count || 0} Upvotes
-          </div>
+          !isInternalRole ? (
+            <button 
+              onClick={handleUpvote}
+              disabled={loading || !user}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-300 ${
+                upvoted 
+                  ? 'bg-indigo-600 text-white shadow-md' 
+                  : 'bg-gray-50 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
+              } disabled:opacity-50`}
+            >
+              <ThumbsUp size={14} className={upvoted ? 'fill-white' : ''} />
+              {upvote_count || 0}
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg">
+              <ThumbsUp size={14} />
+              {upvote_count || 0}
+            </div>
+          )
         ) : (
           <span className="text-[10px] text-gray-400 italic">Dibuat pada {dateLabel}</span>
         )}
@@ -80,4 +133,4 @@ export default function LaporanCard({ laporan, onDelete, minimal = false }) {
       </div>
     </div>
   );
-}
+}
