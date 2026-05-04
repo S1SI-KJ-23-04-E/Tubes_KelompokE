@@ -5,45 +5,130 @@ import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import UploadBuktiModal from '../components/UploadBuktiModal';
 import KendalaForm from '../components/KendalaForm';
-import { 
-  ArrowLeft, Clock, MapPin, CheckCircle2, User, 
-  ThumbsUp, Building2, MapPinned, AlertTriangle, 
-  FileText, ImageIcon, Camera, Star, ChevronRight, Inbox,
+import {
+  ArrowLeft, Clock, MapPin, CheckCircle2, User,
+  ThumbsUp, AlertTriangle, FileText, Camera, Star,
   ShieldCheck, ArrowUpCircle, XCircle, Share2, Info,
-  Wrench, Flag, Ban, AlertCircle
+  Wrench, Flag, Ban, AlertCircle, ChevronRight, Inbox
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+/* ─────────────── CONFIGS ─────────────── */
 const STATUS_MAP = {
-  pending:     { label: 'Menunggu Verifikasi', color: 'bg-amber-100 text-amber-800 border-amber-300', dot: 'bg-amber-400', icon: <Clock size={16} />, badge: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  verified:    { label: 'Terverifikasi',       color: 'bg-blue-100 text-blue-700 border-blue-300',    dot: 'bg-blue-500',  icon: <ShieldCheck size={16} />, badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  in_progress: { label: 'Sedang Diproses',     color: 'bg-purple-100 text-purple-700 border-purple-300', dot: 'bg-purple-500', icon: <Wrench size={16} />, badge: 'bg-purple-50 text-purple-700 border-purple-200' },
-  done:        { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-700 border-emerald-300', dot: 'bg-emerald-500', icon: <Flag size={16} />, badge: 'bg-green-50 text-green-700 border-green-200' },
-  selesai:     { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-700 border-emerald-300', dot: 'bg-emerald-500', icon: <Flag size={16} />, badge: 'bg-green-50 text-green-700 border-green-200' },
-  rejected:    { label: 'Ditolak',             color: 'bg-red-100 text-red-700 border-red-300',       dot: 'bg-red-500',   icon: <Ban size={16} />, badge: 'bg-red-50 text-red-700 border-red-200' },
+  pending:     { label: 'Menunggu Verifikasi', color: 'bg-amber-100 text-amber-800 border-amber-300',        dot: 'bg-amber-400',   icon: <Clock size={14} />,       badge: 'bg-amber-50 text-amber-700 border-amber-200',     step: 0 },
+  verified:    { label: 'Terverifikasi',       color: 'bg-blue-100 text-blue-700 border-blue-300',           dot: 'bg-blue-500',    icon: <ShieldCheck size={14} />, badge: 'bg-blue-50 text-blue-700 border-blue-200',        step: 1 },
+  in_progress: { label: 'Sedang Diproses',     color: 'bg-violet-100 text-violet-700 border-violet-300',     dot: 'bg-violet-500',  icon: <Wrench size={14} />,      badge: 'bg-violet-50 text-violet-700 border-violet-200',  step: 2 },
+  done:        { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-700 border-emerald-300',  dot: 'bg-emerald-500', icon: <Flag size={14} />,        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', step: 3 },
+  selesai:     { label: 'Selesai',             color: 'bg-emerald-100 text-emerald-700 border-emerald-300',  dot: 'bg-emerald-500', icon: <Flag size={14} />,        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', step: 3 },
+  rejected:    { label: 'Ditolak',             color: 'bg-red-100 text-red-700 border-red-300',              dot: 'bg-red-500',     icon: <Ban size={14} />,         badge: 'bg-red-50 text-red-700 border-red-200',           step: -1 },
 };
 
 const PRIORITY_MAP = {
-  high:   { label: 'Tinggi', color: 'bg-red-50 text-red-700 border-red-200' },
-  medium: { label: 'Sedang', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  low:    { label: 'Rendah', color: 'bg-slate-50 text-slate-600 border-slate-200' },
+  high:   { label: 'Prioritas Tinggi', short: 'TINGGI', color: 'bg-red-50 text-red-700 border-red-200',       bar: 'bg-red-500',    dot: 'bg-red-400' },
+  medium: { label: 'Prioritas Sedang', short: 'SEDANG', color: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-500',  dot: 'bg-amber-400' },
+  low:    { label: 'Prioritas Rendah', short: 'RENDAH', color: 'bg-slate-50 text-slate-600 border-slate-200', bar: 'bg-slate-400',  dot: 'bg-slate-400' },
 };
 
-const TIMELINE_CONFIG = {
-  pending: { line: 'bg-yellow-200', circle: 'bg-yellow-400', text: 'text-yellow-800', icon: AlertTriangle },
-  verified: { line: 'bg-blue-200', circle: 'bg-blue-500', text: 'text-blue-800', icon: CheckCircle2 },
-  in_progress: { line: 'bg-orange-200', circle: 'bg-orange-400', text: 'text-orange-800', icon: Clock },
-  done: { line: 'bg-green-200', circle: 'bg-green-500', text: 'text-green-800', icon: CheckCircle2 },
-  selesai: { line: 'bg-green-200', circle: 'bg-green-500', text: 'text-green-800', icon: CheckCircle2 },
-  diproses: { line: 'bg-orange-200', circle: 'bg-orange-400', text: 'text-orange-800', icon: Clock },
-  rejected: { line: 'bg-red-200', circle: 'bg-red-400', text: 'text-red-800', icon: AlertTriangle }
-};
+const PROGRESS_STEPS = [
+  { key: 'pending',     label: 'Dilaporkan',  icon: FileText },
+  { key: 'verified',    label: 'Diverifikasi', icon: ShieldCheck },
+  { key: 'in_progress', label: 'Diproses',    icon: Wrench },
+  { key: 'done',        label: 'Selesai',      icon: CheckCircle2 },
+];
 
+/* ─────────────── PROGRESS BAR ─────────────── */
+function ProgressStepper({ status }) {
+  const normalizedStatus = status === "selesai" ? "done" : status;
+  const currentStep = STATUS_MAP[normalizedStatus]?.step ?? 0;
+  if (currentStep === -1) return (
+    <div className="flex items-center gap-3 px-1">
+      <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+        <Ban size={16} className="text-red-500" />
+      </div>
+      <span className="text-sm font-semibold text-red-600">Laporan Ditolak</span>
+    </div>
+  );
+
+  return (
+    <div className="flex items-center gap-0 w-full">
+      {PROGRESS_STEPS.map((step, i) => {
+        const Icon = step.icon;
+        const done = i <= currentStep;
+        const active = i === currentStep;
+        const upcoming = i > currentStep;
+        return (
+          <div key={step.key} className="flex items-center flex-1">
+            <div className="flex flex-col items-center gap-1.5 min-w-0">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
+                done    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' :
+                active  ? 'bg-white border-indigo-600 text-indigo-600 shadow-lg shadow-indigo-100 ring-4 ring-indigo-50' :
+                          'bg-slate-50 border-slate-200 text-slate-300'
+              }`}>
+                {done ? <CheckCircle2 size={16} /> : <Icon size={15} />}
+              </div>
+              <span className={`text-[9px] font-bold tracking-wider uppercase text-center leading-tight hidden sm:block ${
+                active ? 'text-indigo-600' : done ? 'text-slate-600' : 'text-slate-300'
+              }`}>{step.label}</span>
+            </div>
+            {i < PROGRESS_STEPS.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-1 mb-4 rounded-full transition-all duration-700 ${done ? 'bg-indigo-500' : 'bg-slate-100'}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─────────────── STAT CARD ─────────────── */
+function StatCard({ icon: Icon, label, value, accent = 'indigo' }) {
+  const accents = {
+    indigo: 'bg-indigo-50 text-indigo-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
+    amber: 'bg-amber-50 text-amber-600',
+    violet: 'bg-violet-50 text-violet-600',
+  };
+  return (
+    <div className="flex items-center gap-3 p-4 bg-slate-50/70 rounded-2xl border border-slate-100">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${accents[accent]}`}>
+        <Icon size={18} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{label}</p>
+        <p className="text-sm font-bold text-slate-800 leading-tight mt-0.5 truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── SECTION HEADER ─────────────── */
+function SectionHeader({ icon: Icon, title, subtitle, accent = 'indigo' }) {
+  const accents = {
+    indigo: 'bg-indigo-600 text-white shadow-indigo-200',
+    amber:  'bg-amber-500 text-white shadow-amber-200',
+    emerald: 'bg-emerald-600 text-white shadow-emerald-200',
+    slate:  'bg-slate-700 text-white shadow-slate-200',
+    red:    'bg-red-500 text-white shadow-red-200',
+  };
+  return (
+    <div className="flex items-center gap-4 mb-8">
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${accents[accent]}`}>
+        <Icon size={22} />
+      </div>
+      <div>
+        <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none">{title}</h2>
+        {subtitle && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────── MAIN COMPONENT ─────────────── */
 export default function LaporanDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [upvoted, setUpvoted] = useState(false);
@@ -54,9 +139,9 @@ export default function LaporanDetail() {
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [kendalaModalOpen, setKendalaModalOpen] = useState(false);
   const [kendalaLoading, setKendalaLoading] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const safeStatus = typeof data?.status === 'string' && data.status.trim() ? data.status : 'pending';
-  const safeHistoryStatus = (value) => (typeof value === 'string' && value.trim() ? value : 'pending');
   const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
   const laporanKecamatanId = data?.kecamatan?.id || data?.kecamatan_id;
   const sameKecamatan = String(userKecamatanId || '') === String(laporanKecamatanId || '');
@@ -65,20 +150,16 @@ export default function LaporanDetail() {
   const isPelapor = String(user?.id || '') === String(data?.pelapor_id || '');
   const isInternalRole = ['petugas', 'kecamatan', 'super_admin'].includes(profile?.role);
   const canSubmitFeedback = Boolean(user) && !isInternalRole && isPelapor;
+  const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
+  const isDone = data?.status === 'done' || data?.status === 'selesai';
 
-  useEffect(() => {
-    loadData();
-  }, [id]);
+  useEffect(() => { loadData(); }, [id]);
 
   const loadData = async () => {
     setLoading(true);
     const result = await getLaporanById(id);
-    if (result.success) {
-      setData(result.data);
-    } else {
-      alert('Laporan tidak ditemukan');
-      navigate('/laporan');
-    }
+    if (result.success) setData(result.data);
+    else { alert('Laporan tidak ditemukan'); navigate('/laporan'); }
     setLoading(false);
   };
 
@@ -94,9 +175,8 @@ export default function LaporanDetail() {
   };
 
   const handleUpdateStatus = async (status) => {
-    const ket = window.prompt(`Update status ke ${status}? Catatan (opsional):`);
+    const ket = window.prompt(`Update status ke "${status}"?\nCatatan (opsional):`);
     if (ket === null) return;
-    
     setActionLoading(true);
     const { success } = await updateLaporanStatus(id, status, null, ket);
     if (success) loadData();
@@ -118,410 +198,380 @@ export default function LaporanDetail() {
   };
 
   const handleUploadSubmit = async ({ file, catatan: catatanBukti }) => {
-    setUploadError('');
-    setUploadSuccess('');
-    setActionLoading(true);
-
+    setUploadError(''); setUploadSuccess(''); setActionLoading(true);
     const { success, error } = await updateLaporanStatus(id, 'done', file, catatanBukti);
-
     setActionLoading(false);
-    if (success) {
-      setUploadSuccess('Bukti berhasil dikirim. Status laporan diubah menjadi selesai.');
-      setUploadModalOpen(false);
-      loadData();
-    } else {
-      setUploadError(error || 'Gagal mengirim bukti.');
-    }
+    if (success) { setUploadSuccess('Bukti berhasil dikirim.'); setUploadModalOpen(false); loadData(); }
+    else setUploadError(error || 'Gagal mengirim bukti.');
   };
 
   const handleKendalaSubmit = async (deskripsi) => {
     setKendalaLoading(true);
     const { success, error } = await createKendala(id, deskripsi);
     setKendalaLoading(false);
-
-    if (success) {
-      setKendalaModalOpen(false);
-      loadData();
-    } else {
-      alert('Gagal mengirim kendala: ' + (error || 'Error tidak diketahui'));
-    }
+    if (success) { setKendalaModalOpen(false); loadData(); }
+    else alert('Gagal mengirim kendala: ' + (error || 'Error tidak diketahui'));
   };
 
+  /* ── LOADING ── */
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-6">
-      <div className="relative w-20 h-20">
-        <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-5">
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 border-[3px] border-slate-200 rounded-full"></div>
+        <div className="absolute inset-0 border-[3px] border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
       </div>
-      <div className="text-center">
-        <p className="text-slate-900 font-black text-xl mb-1 tracking-tight">Menyiapkan Detail</p>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest animate-pulse">Mohon tunggu sebentar...</p>
+      <div className="text-center space-y-1">
+        <p className="text-slate-800 font-black text-base tracking-tight">Memuat Laporan</p>
+        <p className="text-slate-400 text-xs font-medium">Mohon tunggu sebentar…</p>
       </div>
     </div>
   );
   if (!data) return null;
 
-  const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
   const statusCfg = STATUS_MAP[data.status] || STATUS_MAP.pending;
-  const priorityVal = (data.prioritas || 'low').toLowerCase();
-  const finalPriority = (priorityVal === 'high' || priorityVal === 'low') ? priorityVal : 'low';
-  const priorityCfg = PRIORITY_MAP[finalPriority];
+  const priorityVal = (['high','medium','low'].includes((data.prioritas || '').toLowerCase())) ? data.prioritas.toLowerCase() : 'low';
+  const priorityCfg = PRIORITY_MAP[priorityVal];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] selection:bg-indigo-100 selection:text-indigo-900">
-      <div className="bg-white/70 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="flex items-center gap-3 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-all group"
+    <div className="min-h-screen bg-[#F4F6FB]">
+
+      {/* ── TOPBAR ── */}
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-14 flex items-center justify-between gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-xs uppercase tracking-widest transition-all group"
           >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            Kembali
+            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span className="hidden sm:inline">Kembali</span>
           </button>
+
+          <div className="flex-1 flex justify-center">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] hidden md:block truncate max-w-xs">
+              #{id?.slice(0, 8).toUpperCase()}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2">
-            <button className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" onClick={() => navigator.share && navigator.share({ title: data.alamat, text: data.deskripsi })}>
-              <Share2 size={18} />
+            <button
+              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+              onClick={() => navigator.share?.({ title: data.alamat, text: data.deskripsi })}
+              title="Bagikan"
+            >
+              <Share2 size={16} />
             </button>
-            <div className="h-6 w-[1px] bg-slate-100 mx-2"></div>
-            <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg border flex items-center gap-2 ${statusCfg.badge}`}>
+            <span className={`hidden sm:flex text-[10px] font-black px-3 py-1.5 rounded-lg border items-center gap-1.5 ${statusCfg.badge}`}>
               {statusCfg.icon} {statusCfg.label.toUpperCase()}
             </span>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
-        <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden mb-12 flex flex-col lg:flex-row min-h-[500px]">
-          <div className="lg:w-[62%] relative bg-slate-100 overflow-hidden">
-            {data.foto_url ? (
-              <img 
-                src={data.foto_url} 
-                alt="Foto kerusakan" 
-                className="w-full h-full object-cover absolute inset-0 transform hover:scale-105 transition-transform duration-1000"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
-                <Camera size={80} strokeWidth={1} className="mb-4 opacity-50" />
-                <p className="text-xs font-black uppercase tracking-[0.2em]">Foto bukti tidak tersedia</p>
-              </div>
-            )}
-            <div className="absolute top-8 left-8">
-              <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-2xl border border-white/50 flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${statusCfg.dot} animate-pulse`}></div>
-                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{statusCfg.label}</span>
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+
+        {/* ── HERO CARD ── */}
+        <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 overflow-hidden">
+          <div className="flex flex-col lg:flex-row min-h-[420px]">
+
+            {/* IMAGE */}
+            <div className="lg:w-[58%] relative bg-slate-100 overflow-hidden min-h-[280px]">
+              {data.foto_url ? (
+                <>
+                  <img
+                    src={data.foto_url}
+                    alt="Foto kerusakan"
+                    onLoad={() => setImgLoaded(true)}
+                    className={`w-full h-full object-cover absolute inset-0 transition-all duration-1000 hover:scale-105 ${imgLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'}`}
+                  />
+                  {/* gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                  {/* bottom-left meta */}
+                  <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-3">
+                    <div className="bg-black/50 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/10">
+                      <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-0.5">Lokasi</p>
+                      <p className="text-xs font-bold text-white leading-snug">
+                        {data.kecamatan?.nama_kecamatan}
+                      </p>
+                    </div>
+                    <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[10px] font-black ${priorityCfg.color}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${priorityCfg.dot} animate-pulse`} />
+                      {priorityCfg.short}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-gradient-to-br from-slate-50 to-slate-100">
+                  <Camera size={56} strokeWidth={1.2} className="mb-3 opacity-40" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tidak ada foto</p>
+                </div>
+              )}
+
+              {/* status pill top */}
+              <div className="absolute top-4 left-4">
+                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-white/50 flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${statusCfg.dot} ${!isDone ? 'animate-pulse' : ''}`} />
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{statusCfg.label}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="lg:w-[38%] p-10 lg:p-12 flex flex-col justify-between bg-white border-l border-slate-50">
-            <div className="space-y-8">
-              <div>
-                <span className={`text-[9px] font-black px-3 py-1.5 rounded-lg border uppercase tracking-widest mb-6 inline-block ${priorityCfg.color}`}>
-                  Prioritas {priorityCfg.label}
-                </span>
-                <h1 className="text-3xl lg:text-4xl font-black text-slate-900 leading-[1.1] tracking-tight">
+            {/* INFO PANEL */}
+            <div className="lg:w-[42%] flex flex-col p-7 lg:p-9 border-t lg:border-t-0 lg:border-l border-slate-100">
+              {/* title */}
+              <div className="mb-6">
+                <h1 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
                   {data.judul || data.alamat}
                 </h1>
+                <p className="text-sm text-slate-500 font-medium mt-2 flex items-center gap-1.5">
+                  <MapPin size={13} className="text-indigo-400 shrink-0" />
+                  Kel. {data.kelurahan?.nama_kelurahan}, Kec. {data.kecamatan?.nama_kecamatan}
+                </p>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-50 transition-colors shrink-0">
-                    <MapPin size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Lokasi Detail</p>
-                    <p className="text-sm font-bold text-slate-700 leading-relaxed italic">
-                      Kel. {data.kelurahan?.nama_kelurahan}, Kec. {data.kecamatan?.nama_kecamatan}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-50 transition-colors shrink-0">
-                    <User size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Identitas Pelapor</p>
-                    <p className="text-sm font-bold text-slate-900">{data.profiles?.nama || 'Warga Anonim'}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-50 transition-colors shrink-0">
-                    <Clock size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Waktu Pelaporan</p>
-                    <p className="text-sm font-bold text-slate-500">
-                      {new Date(data.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
-                    </p>
-                  </div>
-                </div>
+              {/* stats grid */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <StatCard icon={User}  label="Pelapor"         value={data.profiles?.nama || 'Anonim'}  accent="indigo" />
+                <StatCard icon={Clock} label="Dilaporkan"      value={new Date(data.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })} accent="violet" />
+                <StatCard icon={ThumbsUp} label="Dukungan"     value={`${data.upvote_count || 0} Suara`} accent="amber" />
+                <StatCard icon={FileText} label="ID Laporan"   value={`#${id?.slice(0,8).toUpperCase()}`} accent="emerald" />
               </div>
-            </div>
 
-            <div className="mt-12 pt-8 border-t border-slate-100">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dukungan Publik</p>
-                  <p className="text-2xl font-black text-slate-900 leading-none">{data.upvote_count || 0} <span className="text-xs text-slate-400 ml-1 font-bold">Suara</span></p>
-                </div>
+              {/* progress stepper */}
+              <div className="bg-slate-50/80 rounded-2xl border border-slate-100 p-5 mb-6">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Progress Penanganan</p>
+                <ProgressStepper status={data.status} />
+              </div>
+
+              {/* upvote button */}
+              <div className="mt-auto">
                 <button
                   onClick={handleUpvote}
                   disabled={upvoteLoading || !user}
-                  className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${
-                    upvoted 
-                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-[0.98]' 
-                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100'
-                  } disabled:opacity-50`}
+                  className={`w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 active:scale-95 disabled:opacity-50 ${
+                    upvoted
+                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200/60'
+                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/60'
+                  }`}
                 >
-                  <ThumbsUp size={16} className={upvoted ? 'fill-white' : ''} />
-                  {upvoted ? 'Didukung' : 'Dukung'}
+                  <ThumbsUp size={15} className={upvoted ? 'fill-white' : ''} />
+                  {upvoted ? 'Laporan Didukung ✓' : 'Dukung Laporan Ini'}
                 </button>
+                {!user && (
+                  <p className="text-[10px] text-slate-400 text-center mt-2">Login untuk memberikan dukungan</p>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-12 mb-12">
-          <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <FileText size={120} />
+        {/* ── TWO-COL GRID ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* LEFT: deskripsi */}
+          <div className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8">
+            <SectionHeader icon={FileText} title="Deskripsi Kerusakan" subtitle="Kesaksian pelapor" accent="indigo" />
+            <blockquote className="relative">
+              <span className="absolute -top-2 -left-1 text-6xl font-black text-indigo-100 leading-none select-none">"</span>
+              <p className="text-base text-slate-700 leading-loose font-medium pl-6 pt-4 italic">
+                {data.deskripsi}
+              </p>
+              <span className="text-indigo-100 text-6xl font-black leading-none float-right -mt-4 select-none">"</span>
+            </blockquote>
+
+            {/* inline detail pills */}
+            <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-slate-50">
+              <span className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border ${statusCfg.badge}`}>
+                {statusCfg.icon} {statusCfg.label}
+              </span>
+              <span className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border ${priorityCfg.color}`}>
+                {priorityCfg.label}
+              </span>
+              <span className="text-[10px] font-bold px-3 py-1.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-200 flex items-center gap-1.5">
+                <MapPin size={11} /> {data.kecamatan?.nama_kecamatan}
+              </span>
             </div>
+          </div>
+
+          {/* RIGHT: meta sidebar */}
+          <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8 flex flex-col gap-6">
+            <SectionHeader icon={Info} title="Informasi Laporan" subtitle="Detail teknis" accent="slate" />
+            <div className="space-y-4 text-sm">
+              {[
+                { label: 'Kelurahan',   val: data.kelurahan?.nama_kelurahan },
+                { label: 'Kecamatan',   val: data.kecamatan?.nama_kecamatan },
+                { label: 'Pelapor',     val: data.profiles?.nama || 'Anonim' },
+                { label: 'Tanggal',     val: new Date(data.created_at).toLocaleString('id-ID', { dateStyle:'long', timeStyle:'short' }) },
+                { label: 'Status',      val: statusCfg.label },
+                { label: 'Prioritas',   val: priorityCfg.label },
+                { label: 'Dukungan',    val: `${data.upvote_count || 0} suara` },
+              ].map(({ label, val }) => (
+                <div key={label} className="flex items-start justify-between gap-3 py-2 border-b border-slate-50 last:border-0">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">{label}</span>
+                  <span className="text-xs font-bold text-slate-700 text-right leading-snug">{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── ADMIN PANEL ── */}
+        {isAdmin && (
+          <div className="bg-[#0F172A] rounded-3xl shadow-2xl p-8 lg:p-10 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),transparent_60%)] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-72 h-72 bg-violet-500/5 rounded-full blur-3xl" />
+
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                  <FileText size={22} />
+                <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-indigo-400 shadow-lg">
+                  <ShieldCheck size={24} />
                 </div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Detail Kerusakan</h2>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">Panel Administrasi</h2>
+                  <p className="text-indigo-300/50 text-[10px] font-bold uppercase tracking-[0.2em] mt-0.5">Manajemen & Tindak Lanjut</p>
+                </div>
               </div>
-              <div className="bg-slate-50/80 rounded-[1.5rem] p-8 border border-slate-100 relative">
-                <div className="absolute -top-3 left-8 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase tracking-tighter">Kesaksian Warga</div>
-                <p className="text-slate-700 leading-loose text-[16px] font-medium italic">
-                  "{data.deskripsi}"
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {isAdmin && (
-            <div className="bg-[#0F172A] rounded-[2.5rem] shadow-2xl p-10 text-white relative overflow-hidden group">
-              <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[60%] bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-700"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-10">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-indigo-400 border border-white/10 shadow-2xl">
-                    <ShieldCheck size={28} />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black tracking-tight">Kontrol Administrasi</h2>
-                    <p className="text-indigo-300/60 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Management Dashboard v2.0</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* priority */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <ArrowUpCircle size={12} className="text-indigo-400" /> Ubah Prioritas
+                  </p>
+                  <div className="flex gap-2">
+                    {['HIGH', 'MEDIUM', 'LOW'].map(p => (
+                      <button
+                        key={p}
+                        onClick={() => handleUpdatePriority(p)}
+                        disabled={actionLoading}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all border ${
+                          priorityVal === p.toLowerCase()
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-900/40'
+                            : 'bg-slate-800/60 border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                        }`}
+                      >{p}</button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                      <ArrowUpCircle size={14} className="text-indigo-400" />
-                      Ubah Prioritas
-                    </label>
-                    <div className="flex gap-3">
-                      {['HIGH', 'LOW'].map(p => (
-                        <button 
-                          key={p}
-                          onClick={() => handleUpdatePriority(p)} 
-                          className={`flex-1 py-4 rounded-2xl text-[11px] font-black transition-all border-2 ${
-                            finalPriority === p.toLowerCase() 
-                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-900/50 scale-[0.98]' 
-                              : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:border-indigo-500/50 hover:text-slate-300'
-                          }`}
-                        >{p}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                      <Inbox size={14} className="text-indigo-400" />
-                      Tindakan Lanjutan
-                    </label>
-                    <div className="space-y-3">
-                      {canModerate && data.status === 'pending' && (
-                        <div className="flex gap-3">
-                          <button onClick={() => handleUpdateStatus('verified')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-blue-900/40 transition-all active:scale-95 uppercase tracking-widest">Verifikasi</button>
-                          <button onClick={() => handleUpdateStatus('rejected')} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-red-900/40 transition-all active:scale-95 uppercase tracking-widest">Tolak</button>
-                        </div>
-                      )}
-                      {canWorkAction && data.status === 'verified' && (
-                        <button onClick={() => handleUpdateStatus('in_progress')} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-purple-900/40 transition-all uppercase tracking-widest">Mulai Perbaikan</button>
-                      )}
-                      {canWorkAction && data.status === 'in_progress' && (
-                        <button onClick={() => handleUpdateStatus('done')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-900/40 transition-all uppercase tracking-widest">Selesaikan Proyek</button>
-                      )}
-                      {canModerate && data.status !== 'pending' && (
-                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-3">
-                          <XCircle size={20} className="text-red-500 shrink-0" />
-                          <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight">Penolakan tidak tersedia setelah tahap verifikasi.</p>
-                        </div>
-                      )}
-                      {canWorkAction && ['verified','in_progress'].includes(data.status) && (
-                        <div className="pt-4 flex gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setUploadModalOpen(true)}
-                            className="inline-flex items-center gap-2 rounded-3xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                          >
-                            <ArrowUpCircle size={18} /> Upload Bukti
+                {/* actions */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Inbox size={12} className="text-indigo-400" /> Tindak Lanjut
+                  </p>
+                  <div className="space-y-2">
+                    {canModerate && data.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleUpdateStatus('verified')} disabled={actionLoading}
+                          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider">
+                          ✓ Verifikasi
+                        </button>
+                        <button onClick={() => handleUpdateStatus('rejected')} disabled={actionLoading}
+                          className="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider">
+                          ✕ Tolak
+                        </button>
+                      </div>
+                    )}
+                    {canWorkAction && data.status === 'verified' && (
+                      <button onClick={() => handleUpdateStatus('in_progress')} disabled={actionLoading}
+                        className="w-full bg-violet-600 hover:bg-violet-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">
+                        ▶ Mulai Perbaikan
+                      </button>
+                    )}
+                    {canWorkAction && data.status === 'in_progress' && (
+                      <button onClick={() => handleUpdateStatus('done')} disabled={actionLoading}
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">
+                        ✓ Tandai Selesai
+                      </button>
+                    )}
+                    {canModerate && !['pending'].includes(data.status) && (
+                      <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
+                        <XCircle size={14} className="text-slate-600 shrink-0" />
+                        <p className="text-[10px] text-slate-600 leading-snug">Penolakan tidak tersedia setelah verifikasi.</p>
+                      </div>
+                    )}
+                    {canWorkAction && ['verified','in_progress'].includes(data.status) && (
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={() => setUploadModalOpen(true)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-indigo-600 border border-white/10 hover:border-indigo-600 text-white py-3 rounded-xl text-[10px] font-black transition-all">
+                          <ArrowUpCircle size={14} /> Upload Bukti
+                        </button>
+                        {profile?.role === 'petugas' && data.status === 'in_progress' && (
+                          <button onClick={() => setKendalaModalOpen(true)}
+                            className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-amber-600 border border-white/10 hover:border-amber-600 text-white py-3 rounded-xl text-[10px] font-black transition-all">
+                            <AlertCircle size={14} /> Lapor Kendala
                           </button>
-                          {profile?.role === 'petugas' && data.status === 'in_progress' && (
-                            <button
-                              type="button"
-                              onClick={() => setKendalaModalOpen(true)}
-                              className="inline-flex items-center gap-2 rounded-3xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
-                            >
-                              <AlertCircle size={18} /> Lapor Kendala
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
- {data.kendala && (
-  <div className="bg-slate-50 rounded-[2.5rem] shadow-sm border border-slate-200 p-10 lg:p-14 mb-12 relative overflow-hidden">
-    
-    {/* subtle background */}
-    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-200/40 rounded-full blur-3xl -mr-32 -mt-32"></div>
-
-    {/* HEADER */}
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12 relative z-10">
-      <div className="flex items-center gap-5">
-        <div className="w-14 h-14 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-600 shadow-sm">
-          <AlertCircle size={26} />
-        </div>
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-            Kendala Lapangan
-          </h2>
-          <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mt-1">
-            Hambatan selama pengerjaan
-          </p>
-        </div>
-      </div>
-
-      {/* COUNTER */}
-      <div className="bg-white px-5 py-3 rounded-xl border border-slate-200">
-        <p className="text-xs text-slate-400 font-semibold">Total Kendala</p>
-        <p className="text-xl font-bold text-slate-700">
-          {data.kendala.length}
-        </p>
-      </div>
-    </div>
-
-    {/* LIST */}
-    <div className="relative z-10 grid gap-5">
-      {data.kendala.length > 0 ? (
-        data.kendala.map((kendala) => (
-          <div
-            key={kendala.id}
-            className="group bg-white p-5 rounded-2xl border border-slate-200 hover:shadow-md transition-all duration-200"
-          >
-            <div className="flex items-start gap-4">
-              
-              {/* ICON */}
-              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
-                <AlertTriangle size={16} />
-              </div>
-
-              <div className="flex-1">
-                {/* LABEL */}
-                <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-md mb-2">
-                  Kendala
-                </span>
-
-                {/* DESKRIPSI */}
-                <p className="text-sm text-slate-700 leading-relaxed mb-2">
-                  {kendala.deskripsi}
-                </p>
-
-                {/* FOOTER */}
-                <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <Clock size={12} />
-                  {new Date(kendala.created_at).toLocaleString('id-ID', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short'
-                  })}
-                </p>
-              </div>
+        {/* ── KENDALA ── */}
+        {data.kendala && data.kendala.length > 0 && (
+          <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8">
+            <div className="flex items-center justify-between mb-6">
+              <SectionHeader icon={AlertCircle} title="Kendala Lapangan" subtitle="Hambatan selama pengerjaan" accent="red" />
+              <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-red-50 text-red-600 border border-red-100">
+                {data.kendala.length} Kendala
+              </span>
+            </div>
+            <div className="grid gap-3">
+              {data.kendala.map((kendala, idx) => (
+                <div key={kendala.id} className="flex items-start gap-4 p-5 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-red-100 hover:bg-red-50/30 transition-all group">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 text-red-500 flex items-center justify-center shrink-0 group-hover:bg-red-200 transition-colors text-xs font-black">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 leading-relaxed">{kendala.deskripsi}</p>
+                    <p className="text-[10px] text-slate-400 font-medium mt-2 flex items-center gap-1.5">
+                      <Clock size={10} />
+                      {new Date(kendala.created_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))
-      ) : (
-        <div className="text-center py-16">
-          <AlertCircle size={40} className="mx-auto text-slate-300 mb-3" />
-          <p className="text-slate-400 text-sm">
-            Belum ada kendala dilaporkan
-          </p>
-        </div>
-      )}
-    </div>
-  </div>
-)}
+        )}
 
-        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 mb-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -mr-32 -mt-32"></div>
-          <div className="flex items-center justify-between mb-16 relative z-10">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-100">
-                <Clock size={28} />
-              </div>
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Timeline Progress</h2>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Audit Trail & History</p>
-              </div>
-            </div>
-          </div>
+        {/* ── TIMELINE ── */}
+        <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8">
+          <SectionHeader icon={Clock} title="Timeline Progress" subtitle="Audit trail & riwayat perubahan" accent="indigo" />
 
-          <div className="relative z-10 max-w-4xl mx-auto">
-            {data.history && data.history.length > 0 ? (
-              <div className="space-y-12">
+          {data.history && data.history.length > 0 ? (
+            <div className="relative">
+              {/* vertical line */}
+              <div className="absolute left-5 top-0 bottom-0 w-px bg-slate-100" />
+
+              <div className="space-y-1">
                 {data.history.map((h, i) => {
                   const hCfg = STATUS_MAP[h.status] || STATUS_MAP.pending;
-                  const isLast = i === data.history.length - 1;
+                  const isLatest = i === 0;
                   return (
-                    <div key={h.id} className="flex items-center gap-8 md:gap-12 relative group">
-                      {i !== 0 && (
-                        <div className="absolute top-0 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0"></div>
-                      )}
-                      {!isLast && (
-                        <div className="absolute top-1/2 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0 group-hover:bg-indigo-100 transition-colors"></div>
-                      )}
-                      <div className={`relative z-10 w-14 h-14 rounded-[1.25rem] ${hCfg.dot} flex items-center justify-center shrink-0 border-4 border-white shadow-2xl transition-all duration-300 group-hover:scale-110 text-white`}>
+                    <div key={h.id} className="flex items-start gap-5 relative group pb-6 last:pb-0">
+                      {/* dot */}
+                      <div className={`relative z-10 w-10 h-10 rounded-full ${hCfg.dot} flex items-center justify-center shrink-0 border-3 border-white shadow-md text-white transition-transform group-hover:scale-110 ${isLatest ? 'ring-4 ring-offset-2 ring-slate-200' : ''}`}>
                         {hCfg.icon}
                       </div>
-                      <div className="flex-1 bg-slate-50/50 hover:bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                          <span className={`text-[10px] font-black px-4 py-1.5 rounded-xl border uppercase tracking-widest w-fit ${hCfg.badge}`}>
+                      {/* card */}
+                      <div className="flex-1 bg-slate-50/60 hover:bg-white p-5 rounded-2xl border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all duration-300 mb-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-lg border w-fit ${hCfg.badge}`}>
                             {hCfg.label}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em] flex items-center gap-2">
-                            <Clock size={12} />
-                            {new Date(h.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                          </span>
+                          <time className="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5">
+                            <Clock size={10} />
+                            {new Date(h.created_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' })}
+                          </time>
                         </div>
                         {h.catatan && (
-                          <div className="flex gap-4">
-                             <div className="mt-1.5 text-indigo-300">
-                                <Info size={16} />
-                             </div>
-                             <p className="text-sm text-slate-600 font-medium leading-relaxed italic">
-                                "{h.catatan}"
-                             </p>
+                          <div className="flex gap-3 mt-2 pt-3 border-t border-slate-100">
+                            <Info size={14} className="text-indigo-300 shrink-0 mt-0.5" />
+                            <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{h.catatan}"</p>
                           </div>
                         )}
                       </div>
@@ -529,120 +579,148 @@ export default function LaporanDetail() {
                   );
                 })}
               </div>
-            ) : (
-              <div className="text-center py-20 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
-                <Clock size={60} strokeWidth={1} className="mx-auto text-slate-200 mb-6" />
-                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Belum ada aktivitas tercatat</p>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+              <Clock size={40} strokeWidth={1} className="mx-auto text-slate-200 mb-3" />
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Belum ada aktivitas tercatat</p>
+            </div>
+          )}
         </div>
 
-        {(data.status === 'selesai' || data.status === 'done') && data.bukti && (
-          <div className="bg-[#064E3B] rounded-[3rem] shadow-2xl shadow-emerald-900/30 p-10 lg:p-16 mb-12 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-[50%] h-full bg-emerald-500/10 blur-[120px] rounded-full"></div>
-            <div className="relative z-10 flex flex-col lg:flex-row gap-16 items-center">
-              <div className="lg:w-[45%] space-y-10">
-                <div className="space-y-6">
-                  <div className="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-300 border border-white/20 shadow-2xl">
-                    <CheckCircle2 size={40} />
-                  </div>
-                  <h2 className="text-4xl lg:text-5xl font-black leading-tight tracking-tight italic">Misi Selesai.</h2>
-                  <p className="text-emerald-100/70 text-lg font-medium leading-loose">
-                    Infrastruktur telah berhasil dipulihkan. Terima kasih telah berperan aktif dalam membangun kota yang lebih baik.
+        {/* ── BUKTI SELESAI ── */}
+        {isDone && data.bukti && (
+          <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-3xl shadow-2xl p-8 lg:p-12 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(52,211,153,0.15),transparent_60%)] pointer-events-none" />
+            <div className="relative z-10 flex flex-col lg:flex-row gap-10 items-center">
+              <div className="lg:w-[45%] space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-300 shadow-xl">
+                  <CheckCircle2 size={32} />
+                </div>
+                <div>
+                  <h2 className="text-3xl lg:text-4xl font-black leading-tight tracking-tight">Perbaikan Selesai</h2>
+                  <p className="text-emerald-100/60 text-sm font-medium mt-2 leading-relaxed">
+                    Infrastruktur telah berhasil dipulihkan. Terima kasih telah berperan aktif.
                   </p>
                 </div>
                 {data.bukti.keterangan && (
-                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[2rem] border border-white/10 shadow-inner">
-                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-3">Catatan Final Tim Lapangan</p>
-                     <p className="italic font-bold text-xl text-white leading-relaxed">"{data.bukti.keterangan}"</p>
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10">
+                    <p className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest mb-2">Catatan Tim Lapangan</p>
+                    <p className="text-sm font-semibold text-white/90 leading-relaxed italic">"{data.bukti.keterangan}"</p>
                   </div>
                 )}
+                <div className="flex items-center gap-3 text-emerald-300/60 text-xs font-medium">
+                  <CheckCircle2 size={14} />
+                  Diselesaikan pada {new Date(data.updated_at || data.created_at).toLocaleDateString('id-ID', { dateStyle:'long' })}
+                </div>
               </div>
-              <div className="lg:w-[55%] relative group">
-                <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-75 group-hover:scale-90 transition-transform duration-1000"></div>
-                <div className="relative rounded-[2.5rem] overflow-hidden border-8 border-white/10 shadow-2xl transform group-hover:rotate-1 transition-all duration-700">
-                  <img 
-                    src={data.bukti.url_foto} 
-                    alt="Bukti penyelesaian" 
-                    className="w-full aspect-[4/3] object-cover group-hover:scale-110 transition-transform duration-1000" 
+              <div className="lg:w-[55%] group">
+                <div className="relative rounded-2xl overflow-hidden border-4 border-white/10 shadow-2xl group-hover:border-white/20 transition-all duration-500">
+                  <img
+                    src={data.bukti.url_foto}
+                    alt="Bukti penyelesaian"
+                    className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-700"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <div className="absolute bottom-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg">
+                    <p className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Foto Bukti Penyelesaian</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {(data.status === 'selesai' || data.status === 'done') && (
-          <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-10 text-slate-50 opacity-10">
-               <Star size={160} />
-            </div>
-            <div className="relative z-10 max-w-4xl mx-auto">
-              <div className="flex items-center gap-5 mb-14">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center text-white shadow-xl shadow-amber-100">
-                  <Star size={28} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Suara Masyarakat</h2>
-                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Evaluasi & Kepuasan Layanan</p>
-                </div>
-              </div>
+        {/* ── FEEDBACK ── */}
+        {isDone && (
+          <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8">
+            <SectionHeader icon={Star} title="Penilaian Masyarakat" subtitle="Evaluasi & kepuasan layanan" accent="amber" />
 
-              {data.feedback && data.feedback.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-                  {data.feedback.map(fb => (
-                    <div key={fb.id} className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-xl transition-all duration-500">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-1.5">
+            {data.feedback && data.feedback.length > 0 && (
+              <>
+                {/* average rating */}
+                {(() => {
+                  const avg = (data.feedback.reduce((s, f) => s + f.rating, 0) / data.feedback.length).toFixed(1);
+                  return (
+                    <div className="flex items-center gap-6 p-6 bg-amber-50/50 rounded-2xl border border-amber-100 mb-6">
+                      <div className="text-center">
+                        <p className="text-4xl font-black text-amber-600">{avg}</p>
+                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider">/ 5.0</p>
+                      </div>
+                      <div>
+                        <div className="flex gap-1 mb-1.5">
                           {[1,2,3,4,5].map(s => (
-                            <Star key={s} size={16} className={s <= fb.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-slate-100'} />
+                            <Star key={s} size={18} className={s <= Math.round(avg) ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-slate-100'} />
                           ))}
                         </div>
-                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
+                        <p className="text-xs text-slate-500 font-medium">dari {data.feedback.length} penilaian</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {data.feedback.map(fb => (
+                    <div key={fb.id} className="bg-slate-50/70 p-5 rounded-2xl border border-slate-100 hover:shadow-md hover:bg-white transition-all duration-300">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex gap-0.5">
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={14} className={s <= fb.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-slate-100'} />
+                          ))}
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
                           {new Date(fb.created_at).toLocaleDateString('id-ID')}
                         </span>
                       </div>
-                      {fb.ulasan && <p className="text-[15px] text-slate-600 font-bold leading-relaxed italic">"{fb.ulasan}"</p>}
+                      {fb.ulasan && (
+                        <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{fb.ulasan}"</p>
+                      )}
                     </div>
                   ))}
                 </div>
-              )}
-              <div className="bg-gradient-to-br from-indigo-50/50 to-white p-10 rounded-[2.5rem] border border-indigo-100/50 shadow-inner">
-                <FeedbackForm
-                  laporanId={data.id}
-                  onSubmitted={loadData}
-                  currentUserId={user?.id}
-                  canSubmit={canSubmitFeedback}
-                />
-              </div>
+              </>
+            )}
+
+            <div className="bg-gradient-to-br from-indigo-50/40 to-slate-50 p-8 rounded-2xl border border-indigo-100/60">
+              <FeedbackForm
+                laporanId={data.id}
+                onSubmitted={loadData}
+                currentUserId={user?.id}
+                canSubmit={canSubmitFeedback}
+              />
             </div>
           </div>
         )}
 
-        <UploadBuktiModal
-          open={uploadModalOpen}
-          onClose={() => setUploadModalOpen(false)}
-          onSubmit={handleUploadSubmit}
-          loading={actionLoading}
-          errorMessage={uploadError}
-          successMessage={uploadSuccess}
-        />
+      </main>
 
-        {kendalaModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2.5rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
-              <div className="p-10">
-                <KendalaForm
-                  onSubmit={handleKendalaSubmit}
-                  onCancel={() => setKendalaModalOpen(false)}
-                  loading={kendalaLoading}
-                />
-              </div>
+      {/* ── MODALS ── */}
+      <UploadBuktiModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSubmit={handleUploadSubmit}
+        loading={actionLoading}
+        errorMessage={uploadError}
+        successMessage={uploadSuccess}
+      />
+
+      {kendalaModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setKendalaModalOpen(false)}>
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden">
+            <div className="bg-amber-50 border-b border-amber-100 px-8 py-5 flex items-center gap-3">
+              <AlertCircle size={20} className="text-amber-600" />
+              <h3 className="font-black text-slate-800">Laporkan Kendala</h3>
+            </div>
+            <div className="p-8">
+              <KendalaForm
+                onSubmit={handleKendalaSubmit}
+                onCancel={() => setKendalaModalOpen(false)}
+                loading={kendalaLoading}
+              />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
