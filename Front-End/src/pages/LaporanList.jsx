@@ -326,7 +326,7 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
         const itemKecamatanId = item.kecamatan_id || item.kecamatan?.id;
         const sameKecamatan = String(userKecamatanId || '') === String(itemKecamatanId || '');
         const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
-        const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
+        const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
         
         const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
         const isDone = item.status === "done" || item.status === "selesai";
