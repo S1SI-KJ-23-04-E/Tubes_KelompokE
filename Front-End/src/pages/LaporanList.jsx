@@ -434,27 +434,6 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
     );
   }
 
-  {/*SET PRIORITAS*/ }
-  <div className="mt-2">
-  {profile?.role === "kecamatan" ? (
-    <select
-      value={item.prioritas}
-      onChange={(e) => handleUpdatePriority(item.id, e.target.value)}
-      className="border p-2 rounded w-full"
-    >
-      <option value="low">RENDAH</option>
-      <option value="normal">NORMAL</option>
-      <option value="high">TINGGI</option>
-    </select>
-  ) : (
-    <div className="border p-2 rounded bg-gray-50 text-gray-500 text-sm font-semibold text-center">
-      {item.prioritas?.toUpperCase() || "NORMAL"}
-    </div>
-  )}
-</div>
-
-
-
 function DaftarWargaView({ laporan, searchQuery = '' }) {
   const q = searchQuery.toLowerCase().trim();
   const filtered = q
