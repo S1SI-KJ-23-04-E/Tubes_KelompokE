@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+﻿import { supabase } from '../lib/supabase';
 
 // Get current user ID from LOCAL session (no network call — instant)
 async function getCurrentUserId() {
@@ -308,21 +308,20 @@ export async function tolakLaporan(id, keterangan = '') {
 }
 
 export const createKendala = async (laporan_id, deskripsi) => {
-  const { data, error } = await supabase
-    .from('kendala_laporan')
-    .insert([{ laporan_id, deskripsi }]);
   try {
     const userId = await getCurrentUserId();
+
     const { data, error } = await supabase
       .from('kendala_laporan')
-      .insert([{ 
-        laporan_id, 
-        deskripsi: deskripsi,
+      .insert([{
+        laporan_id,
+        deskripsi,
         petugas_id: userId
-      }]);
+      }])
+      .select();
 
-  return { data, error };
     if (error) throw error;
+
     return { success: true, data };
   } catch (error) {
     console.error('Error creating kendala:', error);
@@ -330,6 +329,32 @@ export const createKendala = async (laporan_id, deskripsi) => {
   }
 };
 
+export async function getKendalaByKecamatan(kecamatanId) {
+  try {
+    const { data, error } = await supabase
+      .from('kendala_laporan')
+      .select(`
+        *,
+        laporan (
+          id,
+          kecamatan_id,
+          deskripsi,
+          alamat
+        )
+      `)
+      .eq('laporan.kecamatan_id', kecamatanId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    console.log('HASIL KENDALA:', data);
+
+    return { success: true, data: data || [] };
+  } catch (error) {
+    console.error('Error get kendala kecamatan:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
 export async function checkUserUpvoted(laporanId) {
@@ -340,6 +365,10 @@ export async function checkUserUpvoted(laporanId) {
     const res = await fetch(`${API_URL}/laporan/${laporanId}/upvote/check`, {
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
+    if (!res.ok) {
+      console.warn("Upvote API tidak tersedia");
+      return { success: true, upvoted: false };
+    }
     const data = await res.json();
     return data;
   } catch (error) {
