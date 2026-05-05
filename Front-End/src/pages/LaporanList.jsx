@@ -327,7 +327,8 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
         const sameKecamatan = String(userKecamatanId || '') === String(itemKecamatanId || '');
         const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
         const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
-        
+        const canChangePriority = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
+         
         const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
         const isDone = item.status === "done" || item.status === "selesai";
         const isRejected = item.status === "rejected";
@@ -358,13 +359,16 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
                   <select 
                     value={finalPriority} 
                     onChange={(e) => onPriority(item.id, e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold py-2.5 px-3 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer hover:border-slate-300 active:scale-95"
+                    disabled={!canChangePriority}
+                    className={`w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold py-2.5 px-3 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all ${canChangePriority ? 'cursor-pointer hover:border-slate-300 active:scale-95' : 'cursor-not-allowed opacity-60'}`}
                   >
                     <option value="high">TINGGI</option>
                     <option value="low">RENDAH</option>
                   </select>
+                  {!canChangePriority && (
+                    <p className="mt-2 text-[11px] text-slate-400">Hanya petugas atau kecamatan yang dapat mengubah prioritas.</p>
+                  )}
                </div>
-
                <div className="flex flex-col gap-2">
                   <div className="flex flex-col gap-2">
   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
@@ -382,14 +386,24 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
   )}
 
   {/* PROGRESS */}
-  {canWorkAction && (item.status === 'verified' || item.status === 'pending') && (
-    <button 
-      onClick={() => onStatus(item.id, 'in_progress')}
-      className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold"
-    >
-      Mulai Perbaikan
-    </button>
-  )}
+    {canWorkAction && (
+      <>
+        {item.status === 'verified' && (
+          <button 
+            onClick={() => onStatus(item.id, 'in_progress')}
+            className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold"
+          >
+            Mulai Perbaikan
+          </button>
+        )}
+
+        {item.status === 'pending' && (
+          <p className="text-xs text-gray-400">
+            Menunggu verifikasi admin
+          </p>
+        )}
+      </>
+    )}
 
   {/* SELESAI */}
   {canWorkAction && item.status === 'in_progress' && !isRejected && (
@@ -409,16 +423,37 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
   >
     Tolak Laporan
   </button>
-)}
-</div>
-               </div>
+  )}
+  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+    );
+  }
+
+  {/*SET PRIORITAS*/ }
+  <div className="mt-2">
+  {profile?.role === "kecamatan" ? (
+    <select
+      value={item.prioritas}
+      onChange={(e) => handleUpdatePriority(item.id, e.target.value)}
+      className="border p-2 rounded w-full"
+    >
+      <option value="low">RENDAH</option>
+      <option value="normal">NORMAL</option>
+      <option value="high">TINGGI</option>
+    </select>
+  ) : (
+    <div className="border p-2 rounded bg-gray-50 text-gray-500 text-sm font-semibold text-center">
+      {item.prioritas?.toUpperCase() || "NORMAL"}
     </div>
-  );
-}
+  )}
+</div>
+
+
 
 function DaftarWargaView({ laporan, searchQuery = '' }) {
   const q = searchQuery.toLowerCase().trim();
