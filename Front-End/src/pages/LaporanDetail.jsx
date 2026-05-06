@@ -12,6 +12,8 @@ import {
   Wrench, Flag, Ban, AlertCircle, ChevronRight, Inbox
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import InformasiTambahanForm from '../components/InformasiTambahanForm';
+import InformasiTambahanList from '../components/InformasiTambahanList';
 
 /* ─────────────── CONFIGS ─────────────── */
 const STATUS_MAP = {
@@ -425,6 +427,22 @@ export default function LaporanDetail() {
           </div>
         </div>
 
+        {/* ── INFORMASI TAMBAHAN ── */}
+        {profile?.role === 'petugas' && (
+          <InformasiTambahanList
+            laporanId={data.id}
+          />
+        )}
+
+      {/* =========================
+        FORM ADMIN KECAMATAN
+      ========================= */}
+      {profile?.role === 'kecamatan' && (
+        <InformasiTambahanForm
+          laporanId={data.id}
+        />
+      )}
+
         {/* ── ADMIN PANEL ── */}
         {isAdmin && (
           <div className="bg-[#0F172A] rounded-3xl shadow-2xl p-8 lg:p-10 text-white relative overflow-hidden">
@@ -709,7 +727,7 @@ export default function LaporanDetail() {
             {canSubmitFeedback && (!data.feedback || data.feedback.length === 0) && (
               <div className="bg-gradient-to-br from-indigo-50/40 to-slate-50 p-8 rounded-2xl border border-indigo-100/60 mt-6">
                 <FeedbackForm
-                  laporanId={data.id}
+                  laporan_id={data.id}
                   onSubmitted={loadData}
                   currentUserId={user?.id}
                   canSubmit={true}
