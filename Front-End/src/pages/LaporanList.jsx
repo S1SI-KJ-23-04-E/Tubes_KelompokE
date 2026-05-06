@@ -79,7 +79,7 @@ export default function LaporanList() {
         clearInterval(pollInterval);
       };
     }
-  }, [authLoading, user, profile, isAdmin, activeTab, searchQuery]);
+  }, [authLoading, user, profile, isAdmin, activeTab]);
 
   const loadData = async () => {
     setLoading(true);
@@ -91,9 +91,9 @@ export default function LaporanList() {
         
         let endpoint;
         if (!kecamatanId) {
-          endpoint = `${API_URL}/admin/laporan/semua?search=${searchQuery}`;
+          endpoint = `${API_URL}/admin/laporan/semua`;
         } else {
-          endpoint = `${API_URL}/admin/laporan/kecamatan/${kecamatanId}?search=${searchQuery}`;
+          endpoint = `${API_URL}/admin/laporan/kecamatan/${kecamatanId}`;
         }
         
         try {
@@ -149,13 +149,19 @@ export default function LaporanList() {
   const handleUpdatePriority = async (id, priority) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch(`${API_URL}/admin/laporan/${id}/prioritas`, {
+      const res = await fetch(`${API_URL}/admin/laporan/${id}/prioritas`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ prioritas: priority.toLowerCase() })
       });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        console.error('Priority update failed:', json);
+        alert('Gagal mengubah prioritas: ' + (json.error || 'Unknown error'));
+        return;
+      }
       loadData();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); alert('Gagal mengubah prioritas: ' + err.message); }
   };
 
   const handleUpdateStatus = async (id, status) => {
@@ -273,7 +279,7 @@ export default function LaporanList() {
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
           isAdmin ? (
-            <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} />
+            <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} searchQuery={searchQuery} />
           ) : (
             activeTab === 'publik' ? <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
           )
@@ -307,27 +313,42 @@ function InlineLaporanRedirect() {
   );
 }
 
-function AdminView({ laporan, activeTab, onStatus, onPriority, profile }) {
-  const filteredLaporan = laporan.filter(item => {
+function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQuery }) {
+  // Filter by tab status
+  let filteredLaporan = laporan.filter(item => {
     if (activeTab === 'masuk') return item.status === 'pending';
     if (activeTab === 'progress') return ['verified', 'in_progress'].includes(item.status);
     if (activeTab === 'selesai') return ['done', 'selesai', 'rejected'].includes(item.status);
     return false;
   });
 
+  // Filter by search query (client-side, instant)
+  if (searchQuery && searchQuery.trim() !== '') {
+    const q = searchQuery.toLowerCase().trim();
+    filteredLaporan = filteredLaporan.filter(item => {
+      const judul = (item.judul || '').toLowerCase();
+      const alamat = (item.alamat || '').toLowerCase();
+      const deskripsi = (item.deskripsi || '').toLowerCase();
+      return judul.includes(q) || alamat.includes(q) || deskripsi.includes(q);
+    });
+  }
+
   if (!filteredLaporan || filteredLaporan.length === 0) return <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm"><Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" /><p className="font-medium">Tidak ada laporan di kategori ini.</p></div>;
   
+  // Only allow priority change on masuk & progress tabs, only for admin kecamatan
+  const showPriority = activeTab === 'masuk' || activeTab === 'progress';
+
   return (
     <div className="space-y-5">
       {filteredLaporan.map((item, idx) => {
         const priorityVal = (item.prioritas || 'low').toLowerCase();
-        const finalPriority = (priorityVal === 'high' || priorityVal === 'low') ? priorityVal : 'low';
+        const finalPriority = (priorityVal === 'high') ? 'high' : 'low';
         const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
         const itemKecamatanId = item.kecamatan_id || item.kecamatan?.id;
         const sameKecamatan = String(userKecamatanId || '') === String(itemKecamatanId || '');
         const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
         const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
-        const canChangePriority = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
+        const canChangePriority = showPriority && (profile?.role === 'kecamatan' && sameKecamatan);
          
         const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
         const isDone = item.status === "done" || item.status === "selesai";

@@ -37,7 +37,7 @@ export default function Register() {
     setLoading(false);
 
     if (success) {
-      navigate('/laporan'); // Setelah register berhasil, langsung ke dashboard
+      navigate('/login', { state: { message: 'Pendaftaran berhasil! Silakan login dengan akun yang baru dibuat.' } });
     } else {
       setErrorMsg(`Pendaftaran gagal: ${error}`);
     }

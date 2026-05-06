@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { updateProfile } from "../services/profileService";
+import { updateProfile } from "../services/pProfileService";
 
 export default function ProfilePage() {
   const [nama, setNama] = useState("");
