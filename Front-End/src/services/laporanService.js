@@ -79,7 +79,8 @@ export async function getLaporanById(id) {
         kecamatan:kecamatan_id(id,nama_kecamatan),
         kelurahan:kelurahan_id(id,nama_kelurahan),
         profiles:pelapor_id(id,nama),
-        kendala_laporan(*)
+        kendala_laporan(*),
+        feedback(*)
       `)
       .eq('id', id)
       .single();
@@ -90,6 +91,13 @@ export async function getLaporanById(id) {
     }
 
     console.log('Laporan data:', data);
+
+    // Normalize feedback to always be an array
+    if (data.feedback && !Array.isArray(data.feedback)) {
+      data.feedback = [data.feedback];
+    } else if (!data.feedback) {
+      data.feedback = [];
+    }
 
     // Fetch history — graceful, won't block on failure
     let history = [];
@@ -203,7 +211,8 @@ export async function getLaporanByKecamatan(kecamatanId) {
         *,
         kecamatan ( id, nama_kecamatan ),
         kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
+        profiles ( id, nama ),
+        bukti_selesai ( id )
       `)
       .eq('kecamatan_id', kecamatanId)
       .order('created_at', { ascending: false });
@@ -224,7 +233,8 @@ export async function getAllLaporan(excludeUserId = null) {
         *,
         kecamatan ( id, nama_kecamatan ),
         kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
+        profiles ( id, nama ),
+        bukti_selesai ( id )
       `)
       .order('created_at', { ascending: false });
 
@@ -266,8 +276,8 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     ]);
     if (historyErr) console.warn('History insert warning:', historyErr.message);
 
-    // 3. Handle bukti selesai if status is 'selesai' and a file is provided
-    if (newStatus === 'selesai' && fileBukti) {
+    // 3. Handle bukti selesai if a file is provided
+    if (fileBukti) {
       const fileExt = fileBukti.name.split('.').pop();
       const fileName = `bukti_${id}_${Math.random()}.${fileExt}`;
       const filePath = `bukti/${fileName}`;
@@ -277,7 +287,6 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
         .upload(filePath, fileBukti);
 
       if (uploadError) throw uploadError;
-      await supabase.storage.from('laporan-photos').upload(filePath, fileBukti);
 
       const { data: publicUrlData } = supabase.storage
         .from('laporan-photos')
@@ -336,11 +345,13 @@ export async function getKendalaByKecamatan(kecamatanId) {
       .from('kendala_laporan')
       .select(`
         *,
-        laporan (
+        laporan!inner (
           id,
           kecamatan_id,
+          judul,
           deskripsi,
-          alamat
+          alamat,
+          status
         )
       `)
       .eq('laporan.kecamatan_id', kecamatanId)

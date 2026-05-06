@@ -90,7 +90,7 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
 
       <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50 transition-all">
         {!minimal ? (
-          !isInternalRole ? (
+          profile?.role === 'warga' ? (
             <button 
               onClick={handleUpvote}
               disabled={loading || !user}
