@@ -119,10 +119,10 @@ export function AuthProvider({ children }) {
     const { error: profileError } = await supabase.from('profiles').insert([profileData]);
     if (profileError) return { success: false, error: profileError.message };
 
-    setUser(authUser);
-    setProfile(profileData);
-    profileCache.current = profileData;
-    return { success: true, user: authUser, profile: profileData };
+    // Keluar (sign out) agar tidak otomatis login setelah mendaftar
+    await supabase.auth.signOut();
+
+    return { success: true };
   };
 
   const logout = async () => {
@@ -134,8 +134,16 @@ export function AuthProvider({ children }) {
     return { success: true };
   };
 
+  const updateProfileState = (updatedData) => {
+    setProfile(prev => {
+      const newProf = { ...prev, ...updatedData };
+      profileCache.current = newProf;
+      return newProf;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, register, logout, updateProfileState }}>
       {children}
     </AuthContext.Provider>
   );

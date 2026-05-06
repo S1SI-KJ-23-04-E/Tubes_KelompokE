@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
@@ -8,12 +8,12 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // POST /api/laporan — Buat laporan baru
 router.post('/', authenticate, async (req, res) => {
-  const { kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url } = req.body;
+  const { judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url } = req.body;
   const userId = req.user.id;
 
   const { data: laporan, error } = await supabaseAdmin
     .from('laporan')
-    .insert({ pelapor_id: userId, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url, status: 'pending' })
+    .insert({ pelapor_id: userId, judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url, status: 'pending' })
     .select()
     .single();
 
