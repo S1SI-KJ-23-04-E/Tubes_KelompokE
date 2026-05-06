@@ -199,7 +199,7 @@ export default function LaporanDetail() {
 
   const handleUploadSubmit = async ({ file, catatan: catatanBukti }) => {
     setUploadError(''); setUploadSuccess(''); setActionLoading(true);
-    const { success, error } = await updateLaporanStatus(id, 'in_progress', file, catatanBukti);
+    const { success, error } = await updateLaporanStatus(id, 'done', file, catatanBukti);
     setActionLoading(false);
     if (success) { setUploadSuccess('Bukti berhasil dikirim.'); setUploadModalOpen(false); loadData(); }
     else setUploadError(error || 'Gagal mengirim bukti.');

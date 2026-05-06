@@ -26,6 +26,11 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!email.endsWith('@gmail.com')) {
+      return setErrorMsg('Hanya email dengan domain @gmail.com yang diizinkan');
+    }
+
     if (password.length < 6) {
       return setErrorMsg('Password minimal 6 karakter');
     }
