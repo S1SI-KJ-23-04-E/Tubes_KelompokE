@@ -146,12 +146,12 @@ export default function LaporanDetail() {
   const laporanKecamatanId = data?.kecamatan?.id || data?.kecamatan_id;
   const sameKecamatan = String(userKecamatanId || '') === String(laporanKecamatanId || '');
   const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
-  const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
+  const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
   const isPelapor = String(user?.id || '') === String(data?.pelapor_id || '');
   const isInternalRole = ['petugas', 'kecamatan', 'super_admin'].includes(profile?.role);
   const canSubmitFeedback = Boolean(user) && !isInternalRole && isPelapor;
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
-  const isDone = data?.status === 'done' || data?.status === 'selesai';
+  const isDone = data?.status === 'done';
 
   useEffect(() => { loadData(); }, [id]);
 
@@ -199,7 +199,7 @@ export default function LaporanDetail() {
 
   const handleUploadSubmit = async ({ file, catatan: catatanBukti }) => {
     setUploadError(''); setUploadSuccess(''); setActionLoading(true);
-    const { success, error } = await updateLaporanStatus(id, 'done', file, catatanBukti);
+    const { success, error } = await updateLaporanStatus(id, 'in_progress', file, catatanBukti);
     setActionLoading(false);
     if (success) { setUploadSuccess('Bukti berhasil dikirim.'); setUploadModalOpen(false); loadData(); }
     else setUploadError(error || 'Gagal mengirim bukti.');
@@ -344,20 +344,31 @@ export default function LaporanDetail() {
 
               {/* upvote button */}
               <div className="mt-auto">
-                <button
-                  onClick={handleUpvote}
-                  disabled={upvoteLoading || !user}
-                  className={`w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 active:scale-95 disabled:opacity-50 ${
-                    upvoted
-                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200/60'
-                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/60'
-                  }`}
-                >
-                  <ThumbsUp size={15} className={upvoted ? 'fill-white' : ''} />
-                  {upvoted ? 'Laporan Didukung ✓' : 'Dukung Laporan Ini'}
-                </button>
-                {!user && (
-                  <p className="text-[10px] text-slate-400 text-center mt-2">Login untuk memberikan dukungan</p>
+                {profile?.role === 'warga' ? (
+                  <>
+                    <button
+                      onClick={handleUpvote}
+                      disabled={upvoteLoading || !user || ['done', 'selesai', 'rejected'].includes(data.status)}
+                      className={`w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 active:scale-95 disabled:opacity-50 ${
+                        upvoted
+                          ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200/60'
+                          : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/60'
+                      }`}
+                    >
+                      <ThumbsUp size={15} className={upvoted ? 'fill-white' : ''} />
+                      {upvoted ? 'Laporan Didukung ✓' : 'Dukung Laporan Ini'}
+                    </button>
+                    {!user ? (
+                      <p className="text-[10px] text-slate-400 text-center mt-2">Login untuk memberikan dukungan</p>
+                    ) : ['done', 'selesai', 'rejected'].includes(data.status) ? (
+                      <p className="text-[10px] text-slate-400 text-center mt-2">Dukungan ditutup karena laporan telah selesai</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-50 text-slate-400 border border-slate-100">
+                    <ThumbsUp size={15} />
+                    {data.upvote_count || 0} Dukungan
+                  </div>
                 )}
               </div>
             </div>
@@ -438,7 +449,7 @@ export default function LaporanDetail() {
                     <ArrowUpCircle size={12} className="text-indigo-400" /> Ubah Prioritas
                   </p>
                   <div className="flex gap-2">
-                    {['HIGH', 'MEDIUM', 'LOW'].map(p => (
+                    {['HIGH', 'LOW'].map(p => (
                       <button
                         key={p}
                         onClick={() => handleUpdatePriority(p)}
@@ -478,29 +489,37 @@ export default function LaporanDetail() {
                       </button>
                     )}
                     {canWorkAction && data.status === 'in_progress' && (
-                      <button onClick={() => handleUpdateStatus('done')} disabled={actionLoading}
-                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">
-                        ✓ Tandai Selesai
-                      </button>
-                    )}
-                    {canModerate && !['pending'].includes(data.status) && (
-                      <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
-                        <XCircle size={14} className="text-slate-600 shrink-0" />
-                        <p className="text-[10px] text-slate-600 leading-snug">Penolakan tidak tersedia setelah verifikasi.</p>
-                      </div>
-                    )}
-                    {canWorkAction && ['verified','in_progress'].includes(data.status) && (
                       <div className="flex gap-2 pt-1">
-                        <button onClick={() => setUploadModalOpen(true)}
-                          className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-indigo-600 border border-white/10 hover:border-indigo-600 text-white py-3 rounded-xl text-[10px] font-black transition-all">
-                          <ArrowUpCircle size={14} /> Upload Bukti
-                        </button>
-                        {profile?.role === 'petugas' && data.status === 'in_progress' && (
+                        {!data.bukti && (
+                          <button onClick={() => setUploadModalOpen(true)}
+                            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-[10px] font-black transition-all">
+                            <ArrowUpCircle size={14} /> Upload Bukti Selesai
+                          </button>
+                        )}
+                        {profile?.role === 'petugas' && (
                           <button onClick={() => setKendalaModalOpen(true)}
                             className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-amber-600 border border-white/10 hover:border-amber-600 text-white py-3 rounded-xl text-[10px] font-black transition-all">
                             <AlertCircle size={14} /> Lapor Kendala
                           </button>
                         )}
+                      </div>
+                    )}
+                    {canModerate && data.status === 'in_progress' && data.bukti && (
+                      <button onClick={() => handleUpdateStatus('done')} disabled={actionLoading}
+                        className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">
+                        ✓ Selesai
+                      </button>
+                    )}
+                    {canModerate && data.status === 'in_progress' && !data.bukti && (
+                      <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
+                        <XCircle size={14} className="text-slate-600 shrink-0" />
+                        <p className="text-[10px] text-slate-600 leading-snug">Menunggu petugas mengunggah bukti selesai.</p>
+                      </div>
+                    )}
+                    {canModerate && !['pending', 'in_progress'].includes(data.status) && (
+                      <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
+                        <XCircle size={14} className="text-slate-600 shrink-0" />
+                        <p className="text-[10px] text-slate-600 leading-snug">Laporan sudah diselesaikan.</p>
                       </div>
                     )}
                   </div>
@@ -589,7 +608,7 @@ export default function LaporanDetail() {
         </div>
 
         {/* ── BUKTI SELESAI ── */}
-        {isDone && data.bukti && (
+        {data.bukti && (
           <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-3xl shadow-2xl p-8 lg:p-12 text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(52,211,153,0.15),transparent_60%)] pointer-events-none" />
             <div className="relative z-10 flex flex-col lg:flex-row gap-10 items-center">
@@ -632,7 +651,7 @@ export default function LaporanDetail() {
         )}
 
         {/* ── FEEDBACK ── */}
-        {isDone && (
+        {isDone && profile?.role !== 'petugas' && (
           <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8">
             <SectionHeader icon={Star} title="Penilaian Masyarakat" subtitle="Evaluasi & kepuasan layanan" accent="amber" />
 
@@ -681,14 +700,22 @@ export default function LaporanDetail() {
               </>
             )}
 
-            <div className="bg-gradient-to-br from-indigo-50/40 to-slate-50 p-8 rounded-2xl border border-indigo-100/60">
-              <FeedbackForm
-                laporanId={data.id}
-                onSubmitted={loadData}
-                currentUserId={user?.id}
-                canSubmit={canSubmitFeedback}
-              />
-            </div>
+            {(!data.feedback || data.feedback.length === 0) && (profile?.role === 'kecamatan' || profile?.role === 'super_admin') && (
+              <div className="text-center py-6 text-slate-500 text-sm italic">
+                Belum ada penilaian dari pelapor.
+              </div>
+            )}
+
+            {canSubmitFeedback && (!data.feedback || data.feedback.length === 0) && (
+              <div className="bg-gradient-to-br from-indigo-50/40 to-slate-50 p-8 rounded-2xl border border-indigo-100/60 mt-6">
+                <FeedbackForm
+                  laporanId={data.id}
+                  onSubmitted={loadData}
+                  currentUserId={user?.id}
+                  canSubmit={true}
+                />
+              </div>
+            )}
           </div>
         )}
 

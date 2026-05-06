@@ -5,11 +5,12 @@ import {
   getLaporanByUser, 
   getAllLaporan, 
   deleteLaporan,
-  updateLaporanStatus 
+  updateLaporanStatus,
+  getKendalaByKecamatan
 } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
-import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity } from 'lucide-react';
+import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -31,9 +32,11 @@ export default function LaporanList() {
   const [laporanPublik, setLaporanPublik] = useState([]); 
   const [laporanSaya, setLaporanSaya] = useState([]);   
   const [laporanMasuk, setLaporanMasuk] = useState([]); 
+  const [kendalaList, setKendalaList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [publicSearchQuery, setPublicSearchQuery] = useState('');
+  const [publicFilterStatus, setPublicFilterStatus] = useState('all');
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   
   const [searchParams] = useSearchParams();
@@ -44,6 +47,7 @@ export default function LaporanList() {
   const canModerate = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || (isAdmin ? 'masuk' : 'buat'));
   const adminTabs = new Set(['masuk', 'progress', 'selesai']);
+  if (canModerate) adminTabs.add('kendala');
 
   const resolvedAdminTab = adminTabs.has(activeTab) ? activeTab : 'masuk';
 
@@ -108,6 +112,14 @@ export default function LaporanList() {
           if (!json?.success) throw new Error(json?.error || 'Admin API tidak mengembalikan success=true');
 
           setLaporanMasuk(json.data || []);
+          
+          if (kecamatanId) {
+            const kendalaRes = await getKendalaByKecamatan(kecamatanId);
+            if (kendalaRes.success) {
+              const activeKendala = kendalaRes.data.filter(k => k.laporan?.status !== 'done' && k.laporan?.status !== 'selesai');
+              setKendalaList(activeKendala);
+            }
+          }
         } catch (apiErr) {
           console.warn('Admin API failed, fallback to client query:', apiErr?.message || apiErr);
           const fallbackRes = await getAllLaporan();
@@ -118,6 +130,12 @@ export default function LaporanList() {
             } else {
               const scoped = fallbackData.filter((item) => String(item.kecamatan_id) === String(kecamatanId));
               setLaporanMasuk(scoped);
+              
+              const kendalaRes = await getKendalaByKecamatan(kecamatanId);
+              if (kendalaRes.success) {
+                const activeKendala = kendalaRes.data.filter(k => k.laporan?.status !== 'done' && k.laporan?.status !== 'selesai');
+                setKendalaList(activeKendala);
+              }
             }
           } else {
             setLaporanMasuk([]);
@@ -189,6 +207,9 @@ export default function LaporanList() {
     { id: 'progress', label: 'Laporan Progress', icon: Activity },
     { id: 'selesai', label: 'Laporan Selesai', icon: CheckCircle2 },
   ];
+  if (canModerate) {
+    adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle });
+  }
 
   const tabs = isAdmin ? adminTabsList : wargaTabs;
 
@@ -197,6 +218,7 @@ export default function LaporanList() {
        if (resolvedAdminTab === 'masuk') return 'Laporan Masuk';
        if (resolvedAdminTab === 'progress') return 'Laporan Progress';
        if (resolvedAdminTab === 'selesai') return 'Laporan Selesai';
+       if (resolvedAdminTab === 'kendala') return 'Kendala Lapangan';
     }
     if (activeTab === 'buat') return 'Buat Laporan Baru';
     if (activeTab === 'history') return 'History Laporan Saya';
@@ -263,9 +285,21 @@ export default function LaporanList() {
               </div>
             )}
             {!isAdmin && activeTab === 'publik' && (
-              <div className="relative flex-1 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors" size={16} />
-                <input type="text" placeholder="Cari laporan berdasarkan judul atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-96 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={publicSearchQuery} onChange={(e) => setPublicSearchQuery(e.target.value)} />
+              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+                <div className="relative flex-1 lg:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors" size={16} />
+                  <input type="text" placeholder="Cari laporan berdasarkan judul atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={publicSearchQuery} onChange={(e) => setPublicSearchQuery(e.target.value)} />
+                </div>
+                <select 
+                  value={publicFilterStatus} 
+                  onChange={(e) => setPublicFilterStatus(e.target.value)}
+                  className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none shadow-sm hover:border-indigo-300 focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="pending">Belum Diverifikasi</option>
+                  <option value="verified">Terverifikasi & Proses</option>
+                  <option value="done">Selesai / Ditolak</option>
+                </select>
               </div>
             )}
           </div>
@@ -275,11 +309,21 @@ export default function LaporanList() {
           <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
             <InlineLaporanRedirect />
           </div>
+        ) : activeTab === 'history' && !isAdmin ? (
+          <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
+        ) : !isAdmin && activeTab === 'publik' ? (
+          <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+            <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} filterStatus={publicFilterStatus} />
+          </div>
         ) : loading ? (
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
           isAdmin ? (
-            <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} searchQuery={searchQuery} />
+            activeTab === 'kendala' ? (
+              <KendalaAdminView kendala={kendalaList} searchQuery={searchQuery} />
+            ) : (
+              <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} searchQuery={searchQuery} />
+            )
           ) : (
             activeTab === 'publik' ? <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
           )
@@ -314,11 +358,19 @@ function InlineLaporanRedirect() {
 }
 
 function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQuery }) {
+  const isPetugas = profile?.role === 'petugas';
+
   // Filter by tab status
   let filteredLaporan = laporan.filter(item => {
-    if (activeTab === 'masuk') return item.status === 'pending';
-    if (activeTab === 'progress') return ['verified', 'in_progress'].includes(item.status);
-    if (activeTab === 'selesai') return ['done', 'selesai', 'rejected'].includes(item.status);
+    if (activeTab === 'masuk') {
+      return isPetugas ? item.status === 'verified' : item.status === 'pending';
+    }
+    if (activeTab === 'progress') {
+      return isPetugas ? item.status === 'in_progress' : ['verified', 'in_progress'].includes(item.status);
+    }
+    if (activeTab === 'selesai') {
+      return ['done', 'selesai', 'rejected'].includes(item.status);
+    }
     return false;
   });
 
@@ -427,17 +479,27 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQu
     )}
 
   {/* SELESAI */}
-  {canWorkAction && item.status === 'in_progress' && !isRejected && (
+  {canWorkAction && item.status === 'in_progress' && !(item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
+    <Link 
+      to={`/laporan/${item.id}`}
+      className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-black text-center"
+    >
+      Upload Bukti Selesai
+    </Link>
+  )}
+
+  {/* VERIFIKASI SELESAI OLEH ADMIN KECAMATAN */}
+  {canModerate && item.status === 'in_progress' && (item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
     <button 
       onClick={() => onStatus(item.id, 'done')}
-      className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black"
+      className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black text-center"
     >
-      Tandai Selesai
+      Selesai
     </button>
   )}
 
   {/* TOLAK */}
-  {canModerate && !isDone && !isRejected && (
+  {canModerate && item.status === 'pending' && !isDone && !isRejected && (
   <button 
     onClick={() => onStatus(item.id, 'rejected')}
     className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl"
@@ -455,15 +517,25 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQu
     );
   }
 
-function DaftarWargaView({ laporan, searchQuery = '' }) {
+function DaftarWargaView({ laporan, searchQuery = '', filterStatus = 'all' }) {
   const q = searchQuery.toLowerCase().trim();
-  const filtered = q
-    ? laporan.filter((item) => {
-        const judul = (item.judul || '').toLowerCase();
-        const alamat = (item.alamat || '').toLowerCase();
-        return judul.includes(q) || alamat.includes(q);
-      })
-    : laporan;
+  const filtered = laporan.filter((item) => {
+    // 1. Status Filter
+    let statusMatch = true;
+    if (filterStatus === 'pending') statusMatch = item.status === 'pending';
+    if (filterStatus === 'verified') statusMatch = ['verified', 'in_progress'].includes(item.status);
+    if (filterStatus === 'done') statusMatch = ['done', 'selesai', 'rejected'].includes(item.status);
+
+    // 2. Search Query Filter
+    let searchMatch = true;
+    if (q) {
+      const judul = (item.judul || '').toLowerCase();
+      const alamat = (item.alamat || '').toLowerCase();
+      searchMatch = judul.includes(q) || alamat.includes(q);
+    }
+
+    return statusMatch && searchMatch;
+  });
 
   if (!filtered || filtered.length === 0) {
     return (
@@ -501,6 +573,75 @@ function HistoryWargaView({ laporan, onDelete }) {
         <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 animate-stagger card-hover" style={{ animationDelay: `${idx * 50}ms` }}>
           <div className="flex-1"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${STATUS_CONFIG[item.status]?.badge}`}>{STATUS_CONFIG[item.status]?.label}</span><h4 className="font-bold text-slate-800 text-lg mt-2 transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h4><p className="text-[12px] text-slate-500 mt-1 transition-colors">📍 {item.alamat}</p></div>
           <div className="flex gap-2">{item.status === 'pending' && <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"><Trash2 size={20} /></button>}<Link to={`/laporan/${item.id}`} className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-xl transition-all duration-200 btn-hover-lift"><ChevronRight size={24} /></Link></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function KendalaAdminView({ kendala, searchQuery }) {
+  let filteredKendala = kendala;
+  if (searchQuery && searchQuery.trim() !== '') {
+    const q = searchQuery.toLowerCase().trim();
+    filteredKendala = filteredKendala.filter(item => {
+      const judul = (item.laporan?.judul || '').toLowerCase();
+      const alamat = (item.laporan?.alamat || '').toLowerCase();
+      return judul.includes(q) || alamat.includes(q);
+    });
+  }
+
+  if (!filteredKendala || filteredKendala.length === 0) {
+    return (
+      <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
+        <AlertTriangle size={40} className="mx-auto text-slate-300 mb-2 animate-float" />
+        <p className="font-medium">Tidak ada laporan kendala.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {filteredKendala.map((item, idx) => (
+        <div key={item.id} className="bg-white rounded-2xl border border-red-100 shadow-sm hover:shadow-xl hover:border-red-300 transition-all duration-300 relative animate-stagger flex flex-col overflow-hidden group" style={{ animationDelay: `${idx * 50}ms` }}>
+          
+          {/* Top colored accent line */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-red-500 to-rose-400" />
+          
+          <div className="p-6 flex flex-col flex-1">
+            <div className="flex justify-between items-start mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                  <AlertTriangle size={15} className="text-red-500" />
+                </div>
+                <span className="text-[10px] font-black tracking-widest uppercase text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100">
+                  Kendala Lapangan
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1.5">
+                <Clock size={12}/>
+                {new Date(item.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+            
+            <div className="mb-6">
+              <h4 className="font-extrabold text-slate-800 text-lg leading-snug group-hover:text-red-600 transition-colors">{item.deskripsi || item.isi_kendala}</h4>
+            </div>
+            
+            {item.laporan && (
+              <div className="mt-auto bg-slate-50/80 rounded-xl border border-slate-100 p-4 transition-all hover:bg-slate-50">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <FileText size={12} />
+                  Informasi Laporan Terkait
+                </p>
+                <p className="text-sm font-bold text-slate-700 leading-snug mb-4 line-clamp-1">{item.laporan.judul || item.laporan.deskripsi}</p>
+                
+                <Link to={`/laporan/${item.laporan.id}`} className="flex items-center justify-between w-full bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-sm px-4 py-2.5 rounded-lg text-[11px] font-black tracking-wide text-indigo-600 hover:text-indigo-700 transition-all btn-hover-lift group/btn">
+                  LIHAT DETAIL LAPORAN
+                  <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       ))}
     </div>
