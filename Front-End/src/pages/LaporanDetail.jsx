@@ -361,42 +361,35 @@ export default function LaporanDetail() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dukungan Publik</p>
-                  <p className="text-2xl font-black text-slate-900 leading-none">{data.upvote_count || 0} <span className="text-xs text-slate-400 ml-1 font-bold">Suara</span></p>
+                  <p className="text-2xl font-black text-slate-900 leading-none">
+                    {data.upvote_count || 0} <span className="text-xs text-slate-400 ml-1 font-bold">Suara</span>
+                  </p>
                 </div>
+
                 {!isAdmin && (
-                  <button
-                    onClick={handleUpvote}
-                    disabled={upvoteLoading || !user}
-                    className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${
-                      upvoted 
-                        ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-[0.98]' 
-                        : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100'
-                    } disabled:opacity-50`}
-                  >
-                    <ThumbsUp size={16} className={upvoted ? 'fill-white' : ''} />
-                    {upvoted ? 'Didukung' : 'Dukung'}
-                  </button>
-              {/* upvote button */}
-              <div className="mt-auto">
-                <button
-                  onClick={handleUpvote}
-                  disabled={upvoteLoading || !user}
-                  className={`w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 active:scale-95 disabled:opacity-50 ${
-                    upvoted
-                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200/60'
-                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/60'
-                  }`}
-                >
-                  <ThumbsUp size={15} className={upvoted ? 'fill-white' : ''} />
-                  {upvoted ? 'Laporan Didukung ✓' : 'Dukung Laporan Ini'}
-                </button>
-                {!user && (
-                  <p className="text-[10px] text-slate-400 text-center mt-2">Login untuk memberikan dukungan</p>
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                    <button
+                      onClick={handleUpvote}
+                      disabled={upvoteLoading || !user}
+                      className={`w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 active:scale-95 disabled:opacity-50 ${
+                        upvoted
+                          ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200/60'
+                          : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/60'
+                      }`}
+                    >
+                      <ThumbsUp size={15} className={upvoted ? 'fill-white' : ''} />
+                      {upvoted ? 'Laporan Didukung ✓' : 'Dukung Laporan Ini'}
+                    </button>
+                    {!user && (
+                      <p className="text-[10px] text-slate-400 text-center mt-2">Login untuk memberikan dukungan</p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </div>
+      </div>
 
         {/* ── TWO-COL GRID ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
