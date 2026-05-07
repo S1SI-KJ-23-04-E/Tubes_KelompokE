@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { getKecamatan, getKelurahan, createLaporan, uploadFoto } from '../services/laporanService';
 import { ArrowLeft, Upload, Image as ImageIcon } from 'lucide-react';
 import Select from 'react-select';
+import { AlertModal } from '../components/Modals';
 
 export default function LaporanForm() {
   const navigate = useNavigate();
   const [kecamatans, setKecamatans] = useState([]);
   const [kelurahans, setKelurahans] = useState([]);
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'error' });
   
   const [formData, setFormData] = useState({
     judul: '',
@@ -55,7 +57,8 @@ export default function LaporanForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.kecamatan_id || !formData.kelurahan_id) {
-      return alert('Harap pilih Kecamatan dan Kelurahan');
+      setAlertModal({ open: true, title: 'Incomplete', message: 'Harap pilih Kecamatan dan Kelurahan', type: 'error' });
+      return;
     }
     
     setLoading(true);
@@ -70,7 +73,7 @@ export default function LaporanForm() {
     if (success) {
       navigate('/laporan?tab=history');
     } else {
-      alert('Gagal membuat laporan: ' + error);
+      setAlertModal({ open: true, title: 'Gagal', message: 'Gagal membuat laporan: ' + error, type: 'error' });
     }
   };
 
@@ -255,6 +258,16 @@ export default function LaporanForm() {
 
         </form>
       </div>
+
+      {alertModal.open && (
+        <AlertModal 
+          isOpen={alertModal.open}
+          title={alertModal.title}
+          message={alertModal.message}
+          type={alertModal.type}
+          onClose={() => setAlertModal({ ...alertModal, open: false })}
+        />
+      )}
     </div>
   );
 }
