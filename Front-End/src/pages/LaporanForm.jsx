@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getKecamatan, getKelurahan, createLaporan, uploadFoto } from '../services/laporanService';
-import { ArrowLeft, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Upload, Image as ImageIcon, MapPin, AlertCircle } from 'lucide-react';
 import Select from 'react-select';
 import { AlertModal } from '../components/Modals';
+
+import L from 'leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix leaflet default icon in Vite
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
+});
 
 export default function LaporanForm() {
   const navigate = useNavigate();
@@ -21,6 +36,110 @@ export default function LaporanForm() {
   const [foto, setFoto] = useState(null);
   const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
+  const [geoLocation, setGeoLocation] = useState({ latitude: -6.914744, longitude: 107.609810 }); // Default Bandung
+  const [geoStatus, setGeoStatus] = useState('detecting'); // 'detecting' | 'success' | 'denied' | 'unavailable'
+  const [mapValidationMsg, setMapValidationMsg] = useState('');
+  const [validatingMap, setValidatingMap] = useState(false);
+
+  // Capture geolocation on mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGeoStatus('unavailable');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setGeoLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+        setGeoStatus('success');
+      },
+      (error) => {
+        console.warn('Geolocation error:', error.message);
+        setGeoStatus('denied');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, []);
+
+  // Function to validate pin location against selected Kelurahan
+  const validateLocation = async (lat, lng, kelurahanName) => {
+    if (!kelurahanName) {
+      setMapValidationMsg('');
+      return;
+    }
+    
+    setValidatingMap(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      const data = await res.json();
+      
+      const address = data.address || {};
+      const mapKelurahan = (address.village || address.suburb || address.neighbourhood || '').toLowerCase();
+      
+      if (mapKelurahan && !mapKelurahan.includes(kelurahanName.toLowerCase()) && !kelurahanName.toLowerCase().includes(mapKelurahan)) {
+        setMapValidationMsg(`Titik peta berada di sekitar "${mapKelurahan}", tidak sesuai dengan Kelurahan yang Anda pilih (${kelurahanName}). Silakan geser pin ke lokasi yang benar.`);
+      } else {
+        setMapValidationMsg('');
+      }
+    } catch (err) {
+      console.warn('Geocoding error:', err);
+      // If API fails, we don't block the user (graceful fallback)
+      setMapValidationMsg('');
+    }
+    setValidatingMap(false);
+  };
+
+  // Re-validate if Kelurahan selection changes
+  useEffect(() => {
+    const selectedKel = kelurahans.find(k => k.value === formData.kelurahan_id);
+    if (selectedKel && geoStatus === 'success') {
+      validateLocation(geoLocation.latitude, geoLocation.longitude, selectedKel.label);
+    } else {
+      setMapValidationMsg('');
+    }
+  }, [formData.kelurahan_id, kelurahans]);
+
+  function MapCenterUpdater({ center }) {
+    const map = useMapEvents({});
+    useEffect(() => {
+      if (center[0] !== null && center[1] !== null) {
+        map.flyTo(center, 15);
+      }
+    }, [center, map]);
+    return null;
+  }
+
+  function DraggableMarker() {
+    const map = useMapEvents({
+      click(e) {
+        map.locate();
+      },
+      locationfound(e) {
+        // Optional: fly to location if needed
+      },
+    });
+
+    return (
+      <Marker
+        draggable={true}
+        eventHandlers={{
+          dragend: (e) => {
+            const marker = e.target;
+            const position = marker.getLatLng();
+            setGeoLocation({ latitude: position.lat, longitude: position.lng });
+            
+            const selectedKel = kelurahans.find(k => k.value === formData.kelurahan_id);
+            if (selectedKel) {
+              validateLocation(position.lat, position.lng, selectedKel.label);
+            }
+          },
+        }}
+        position={[geoLocation.latitude, geoLocation.longitude]}
+      />
+    );
+  }
 
   useEffect(() => {
     getKecamatan().then(data => {
@@ -41,9 +160,29 @@ export default function LaporanForm() {
     }
   };
 
-  const handleKelurahanChange = (selectedOption) => {
+  const handleKelurahanChange = async (selectedOption) => {
     const id = selectedOption ? selectedOption.value : '';
     setFormData(prev => ({ ...prev, kelurahan_id: id }));
+
+    if (selectedOption) {
+      try {
+        const selectedKecamatan = kecamatans.find(k => k.value === formData.kecamatan_id);
+        const kecamatanName = selectedKecamatan ? selectedKecamatan.label : '';
+        const query = `${selectedOption.label}, ${kecamatanName}, Indonesia`;
+        
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const newLat = parseFloat(data[0].lat);
+          const newLng = parseFloat(data[0].lon);
+          setGeoLocation({ latitude: newLat, longitude: newLng });
+          validateLocation(newLat, newLng, selectedOption.label);
+          setGeoStatus('success'); // Assume if we got coords, we have a valid point
+        }
+      } catch (err) {
+        console.warn('Geocoding search error:', err);
+      }
+    }
   };
 
   const handleFotoChange = (e) => {
@@ -67,7 +206,12 @@ export default function LaporanForm() {
       foto_url = await uploadFoto(foto);
     }
 
-    const { success, error } = await createLaporan({ ...formData, foto_url });
+    const { success, error } = await createLaporan({ 
+      ...formData, 
+      foto_url,
+      latitude: geoLocation.latitude,
+      longitude: geoLocation.longitude
+    });
     setLoading(false);
     
     if (success) {
@@ -189,6 +333,59 @@ export default function LaporanForm() {
               </div>
             </div>
 
+            {/* Interactive Map Section - Dipindah ke bawah Kelurahan */}
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
+              <div className="flex justify-between items-end mb-2">
+                <label className="block text-sm font-bold text-slate-700">Tentukan Titik Lokasi Peta</label>
+                {validatingMap && <span className="text-[10px] text-orange-500 font-bold flex items-center gap-1 animate-pulse"><div className="w-2 h-2 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" /> Memvalidasi lokasi...</span>}
+              </div>
+              
+              <div className={`border-2 rounded-xl overflow-hidden shadow-sm relative z-0 h-[250px] transition-all ${mapValidationMsg ? 'border-red-400' : 'border-slate-200'}`}>
+                {geoStatus === 'detecting' && (
+                  <div className="absolute inset-0 bg-slate-50 z-20 flex flex-col items-center justify-center">
+                    <MapPin size={30} className="text-slate-300 animate-bounce mb-2" />
+                    <span className="text-sm font-medium text-slate-500">Mencari lokasi Anda...</span>
+                  </div>
+                )}
+                
+                {/* We render map once we have a valid initial coordinate */}
+                {geoLocation.latitude !== null && (
+                  <MapContainer 
+                    center={[geoLocation.latitude, geoLocation.longitude]} 
+                    zoom={15} 
+                    scrollWheelZoom={true} 
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <MapCenterUpdater center={[geoLocation.latitude, geoLocation.longitude]} />
+                    <DraggableMarker />
+                  </MapContainer>
+                )}
+              </div>
+
+              {/* Status and Error Messages */}
+              <div className="mt-2 space-y-2">
+                {geoStatus === 'denied' && (
+                   <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1.5">
+                     <AlertCircle size={12} /> Akses GPS ditolak. Peta diarahkan ke titik default. Silakan geser pin secara manual.
+                   </p>
+                )}
+                <p className="text-[11px] text-slate-500 font-medium">
+                  💡 <strong>Otomatis:</strong> Peta akan terbang ke kelurahan pilihan Anda. <strong>Geser pin merah</strong> untuk penyesuaian detail lokasi.
+                </p>
+                
+                {mapValidationMsg && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-medium flex items-start gap-2">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <p>{mapValidationMsg}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Deskripsi */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan <span className="text-red-500">*</span></label>
@@ -231,6 +428,7 @@ export default function LaporanForm() {
             </div>
           </div>
 
+
           {/* Buttons */}
           <div className="mt-10 flex items-center justify-end space-x-4 border-t border-slate-100 pt-6 animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
             <button 
@@ -242,8 +440,8 @@ export default function LaporanForm() {
             </button>
             <button 
               type="submit" 
-              disabled={loading}
-              className="px-6 py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white font-semibold rounded-md text-sm transition-all duration-300 shadow-sm disabled:opacity-70 flex items-center btn-hover-lift active:scale-95"
+              disabled={loading || !!mapValidationMsg}
+              className="px-6 py-2.5 bg-[#1e3a8a] hover:bg-[#172554] text-white font-semibold rounded-md text-sm transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center btn-hover-lift active:scale-95"
             >
               {loading ? (
                 <>

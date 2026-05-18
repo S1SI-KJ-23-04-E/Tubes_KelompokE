@@ -8,12 +8,17 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // POST /api/laporan — Buat laporan baru
 router.post('/', authenticate, async (req, res) => {
-  const { judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url } = req.body;
+  const { judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url, latitude, longitude } = req.body;
   const userId = req.user.id;
 
   const { data: laporan, error } = await supabaseAdmin
     .from('laporan')
-    .insert({ pelapor_id: userId, judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url, status: 'pending' })
+    .insert({ 
+      pelapor_id: userId, judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url, 
+      latitude: latitude || null, 
+      longitude: longitude || null, 
+      status: 'pending' 
+    })
     .select()
     .single();
 

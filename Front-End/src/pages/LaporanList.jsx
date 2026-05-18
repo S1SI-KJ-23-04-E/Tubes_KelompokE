@@ -7,12 +7,14 @@ import {
   deleteLaporan,
   updateLaporanStatus,
   getKendalaByKecamatan,
-  updateCatatanLaporan
+  updateCatatanLaporan,
+  getDuplicateGroups,
+  mergeLaporan
 } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
 import { CatatanModal, StatusUpdateModal, DeleteConfirmModal, AlertModal } from '../components/Modals';
-import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle, MessageSquare, Copy, GitMerge, MapPin } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -35,6 +37,9 @@ export default function LaporanList() {
   const [laporanSaya, setLaporanSaya] = useState([]);   
   const [laporanMasuk, setLaporanMasuk] = useState([]); 
   const [kendalaList, setKendalaList] = useState([]);
+  const [duplicateGroups, setDuplicateGroups] = useState([]);
+  const [duplicateRadius, setDuplicateRadius] = useState(50);
+  const [duplicateLoading, setDuplicateLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [publicSearchQuery, setPublicSearchQuery] = useState('');
@@ -49,7 +54,10 @@ export default function LaporanList() {
   const canModerate = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || (isAdmin ? 'masuk' : 'buat'));
   const adminTabs = new Set(['masuk', 'progress', 'selesai']);
-  if (canModerate) adminTabs.add('kendala');
+  if (canModerate) {
+    adminTabs.add('kendala');
+    adminTabs.add('duplikat');
+  }
 
   const resolvedAdminTab = adminTabs.has(activeTab) ? activeTab : 'masuk';
 
@@ -251,7 +259,39 @@ export default function LaporanList() {
   ];
   if (canModerate) {
     adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle });
+    adminTabsList.push({ id: 'duplikat', label: 'Deteksi Duplikat', icon: Copy });
   }
+
+  // Load duplicate groups when tab is active
+  useEffect(() => {
+    if (activeTab !== 'duplikat' || !canModerate) return;
+    const kecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
+    if (!kecamatanId) return;
+    loadDuplicates(kecamatanId);
+  }, [activeTab, duplicateRadius]);
+
+  const loadDuplicates = async (kecamatanId) => {
+    setDuplicateLoading(true);
+    const res = await getDuplicateGroups(kecamatanId, duplicateRadius);
+    if (res.success) {
+      setDuplicateGroups(res.data || []);
+    } else {
+      setAlertModal({ open: true, title: 'Error', message: res.error || 'Gagal memuat data duplikat', type: 'error' });
+    }
+    setDuplicateLoading(false);
+  };
+
+  const handleMerge = async (primaryId, secondaryIds) => {
+    const res = await mergeLaporan(primaryId, secondaryIds);
+    if (res.success) {
+      setAlertModal({ open: true, title: 'Berhasil!', message: `${res.merged_count} laporan berhasil digabungkan. Total upvote: ${res.total_upvotes}`, type: 'success' });
+      const kecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
+      if (kecamatanId) loadDuplicates(kecamatanId);
+      loadData();
+    } else {
+      setAlertModal({ open: true, title: 'Gagal', message: res.error || 'Gagal menggabungkan laporan', type: 'error' });
+    }
+  };
 
   const tabs = isAdmin ? adminTabsList : wargaTabs;
 
@@ -261,6 +301,7 @@ export default function LaporanList() {
        if (resolvedAdminTab === 'progress') return 'Laporan Progress';
        if (resolvedAdminTab === 'selesai') return 'Laporan Selesai';
        if (resolvedAdminTab === 'kendala') return 'Kendala Lapangan';
+       if (resolvedAdminTab === 'duplikat') return 'Deteksi Laporan Duplikat';
     }
     if (activeTab === 'buat') return 'Buat Laporan Baru';
     if (activeTab === 'history') return 'History Laporan Saya';
@@ -363,6 +404,15 @@ export default function LaporanList() {
           isAdmin ? (
             activeTab === 'kendala' ? (
               <KendalaAdminView kendala={kendalaList} searchQuery={searchQuery} />
+            ) : activeTab === 'duplikat' ? (
+              <DuplikatAdminView 
+                groups={duplicateGroups} 
+                loading={duplicateLoading} 
+                radius={duplicateRadius}
+                onRadiusChange={setDuplicateRadius}
+                onMerge={handleMerge}
+                searchQuery={searchQuery}
+              />
             ) : (
               <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} onCatatan={openCatatanModal} profile={profile} searchQuery={searchQuery} />
             )
@@ -742,6 +792,341 @@ function KendalaAdminView({ kendala, searchQuery }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================
+// SMART DUPLICATE DETECTION VIEW
+// ============================================
+function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, searchQuery }) {
+  const [mergeModal, setMergeModal] = useState({ open: false, group: null });
+  const [selectedPrimary, setSelectedPrimary] = useState(null);
+  const [merging, setMerging] = useState(false);
+
+  // Filter groups by search
+  let filteredGroups = groups;
+  if (searchQuery && searchQuery.trim()) {
+    const q = searchQuery.toLowerCase().trim();
+    filteredGroups = groups.filter(group =>
+      group.reports.some(r =>
+        (r.judul || '').toLowerCase().includes(q) ||
+        (r.alamat || '').toLowerCase().includes(q) ||
+        (r.deskripsi || '').toLowerCase().includes(q)
+      )
+    );
+  }
+
+  const openMergeModal = (group) => {
+    setSelectedPrimary(group.reports[0]?.id || null);
+    setMergeModal({ open: true, group });
+  };
+
+  const handleConfirmMerge = async () => {
+    if (!selectedPrimary || !mergeModal.group) return;
+    setMerging(true);
+    const secondaryIds = mergeModal.group.reports
+      .filter(r => r.id !== selectedPrimary)
+      .map(r => r.id);
+    await onMerge(selectedPrimary, secondaryIds);
+    setMerging(false);
+    setMergeModal({ open: false, group: null });
+    setSelectedPrimary(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mb-4" />
+        <p className="text-slate-500 font-medium text-sm">Menganalisis laporan duplikat...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Radius Control */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm animate-fade-in">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-100">
+              <MapPin size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-slate-800">Radius Deteksi</p>
+              <p className="text-[11px] text-slate-400">Laporan dalam radius ini kemungkinan duplikat</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 flex-1 sm:justify-end">
+            <input
+              type="range"
+              min="1"
+              max="50"
+              value={radius}
+              onChange={(e) => onRadiusChange(Number(e.target.value))}
+              className="w-40 h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-orange-500"
+            />
+            <span className="text-sm font-black text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200 min-w-[80px] text-center">
+              {radius} meter
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-black text-orange-600">{filteredGroups.length}</p>
+          <p className="text-xs font-bold text-slate-400 mt-1">Grup Duplikat</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-black text-slate-700">
+            {filteredGroups.reduce((sum, g) => sum + g.count, 0)}
+          </p>
+          <p className="text-xs font-bold text-slate-400 mt-1">Total Laporan Terdeteksi</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+          <p className="text-3xl font-black text-emerald-600">
+            {filteredGroups.length > 0
+              ? `${filteredGroups[0].min_distance}m`
+              : '—'}
+          </p>
+          <p className="text-xs font-bold text-slate-400 mt-1">Jarak Terdekat</p>
+        </div>
+      </div>
+
+      {/* Empty State */}
+      {filteredGroups.length === 0 && (
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
+          <Copy size={40} className="mx-auto text-slate-300 mb-3 animate-float" />
+          <p className="font-bold text-lg mb-1">Tidak ada duplikat terdeteksi</p>
+          <p className="text-sm">Semua laporan dalam radius {radius}m terlihat unik. 🎉</p>
+        </div>
+      )}
+
+      {/* Duplicate Groups */}
+      {filteredGroups.map((group, gIdx) => (
+        <div
+          key={group.group_id}
+          className="bg-white rounded-2xl border border-orange-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden animate-stagger"
+          style={{ animationDelay: `${gIdx * 80}ms` }}
+        >
+          {/* Group Header */}
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-md shadow-orange-200">
+                {group.count}
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-slate-800">
+                  Grup Duplikat #{gIdx + 1}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Jarak: <span className="font-bold text-orange-600">{group.min_distance}m</span>
+                  {group.max_distance !== group.min_distance && (
+                    <span> — {group.max_distance}m</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => openMergeModal(group)}
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all shadow-md shadow-orange-200 btn-hover-lift active:scale-95"
+            >
+              <GitMerge size={14} />
+              Gabungkan
+            </button>
+          </div>
+
+          {/* Reports in Group */}
+          <div className="p-4 space-y-3">
+            {group.reports.map((report, rIdx) => {
+              const cfg = STATUS_CONFIG[report.status] || STATUS_CONFIG.pending;
+              return (
+                <div
+                  key={report.id}
+                  className="flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-200"
+                >
+                  {/* Report Photo */}
+                  {report.foto_url && (
+                    <div className="w-full md:w-24 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                      <img src={report.foto_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
+                  {/* Report Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
+                        {cfg.label}
+                      </span>
+                      {rIdx === 0 && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                          LAPORAN PERTAMA
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        {new Date(report.created_at).toLocaleString('id-ID', { 
+                          day: 'numeric', month: 'short', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">
+                      {report.judul || report.deskripsi}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                      📍 {report.alamat}
+                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                        👤 {report.pelapor_nama || 'Warga'}
+                      </span>
+                      <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded">
+                        👍 {report.upvote_count || 0} dukungan
+                      </span>
+                      <Link
+                        to={`/laporan/${report.id}`}
+                        className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 ml-auto"
+                      >
+                        DETAIL <ChevronRight size={12} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Distance Info */}
+            {group.distances.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                <MapPin size={14} className="text-orange-500" />
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Jarak antar laporan:{' '}
+                  {group.distances.map((d, i) => (
+                    <span key={i} className="font-bold text-orange-600">
+                      {d.meters}m{i < group.distances.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* Merge Modal */}
+      {mergeModal.open && mergeModal.group && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={(e) => e.target === e.currentTarget && setMergeModal({ open: false, group: null })}
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden animate-slide-in-up max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100 px-8 py-5 flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200">
+                <GitMerge size={20} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-800">Gabungkan Laporan Duplikat</h3>
+                <p className="text-[11px] text-slate-500">Pilih laporan utama yang akan dipertahankan</p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <p className="text-sm text-slate-600 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                ⚠️ <strong>Perhatian:</strong> Laporan yang digabungkan akan ditandai sebagai <em>selesai</em> dan upvote-nya dipindahkan ke laporan utama. Tindakan ini tidak dapat dibatalkan.
+              </p>
+
+              <div className="space-y-3">
+                {mergeModal.group.reports.map((report, idx) => {
+                  const isSelected = selectedPrimary === report.id;
+                  return (
+                    <button
+                      key={report.id}
+                      type="button"
+                      onClick={() => setSelectedPrimary(report.id)}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+                        isSelected
+                          ? 'border-orange-500 bg-orange-50 shadow-md shadow-orange-100'
+                          : 'border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                          isSelected ? 'border-orange-500 bg-orange-500' : 'border-slate-300'
+                        }`}>
+                          {isSelected && (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                              <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            {isSelected && (
+                              <span className="text-[10px] font-black text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
+                                UTAMA
+                              </span>
+                            )}
+                            {!isSelected && (
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                AKAN DIGABUNGKAN
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-slate-800 text-sm truncate">
+                            {report.judul || report.deskripsi}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">📍 {report.alamat}</p>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="text-[10px] text-slate-400">👤 {report.pelapor_nama}</span>
+                            <span className="text-[10px] text-slate-400">👍 {report.upvote_count || 0}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(report.created_at).toLocaleDateString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-slate-100 p-6 flex gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMergeModal({ open: false, group: null })}
+                disabled={merging}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmMerge}
+                disabled={merging || !selectedPrimary}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {merging ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Menggabungkan...
+                  </>
+                ) : (
+                  <>
+                    <GitMerge size={14} />
+                    Gabungkan {mergeModal.group.reports.length - 1} Laporan
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
