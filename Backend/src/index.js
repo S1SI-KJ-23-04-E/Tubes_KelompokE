@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+
 import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
 import profileRoutes from './routes/profile.js';
-import InformasiTambahanRoutes from './routes/InformasiTambahan.js';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -30,7 +30,7 @@ app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/InformasiTambahan', InformasiTambahanRoutes);
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
