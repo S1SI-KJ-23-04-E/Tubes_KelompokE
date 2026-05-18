@@ -403,7 +403,7 @@ export default function LaporanDetail() {
             <SectionHeader icon={FileText} title="Deskripsi Kerusakan" subtitle="Kesaksian pelapor" accent="indigo" />
             <blockquote className="relative">
               <span className="absolute -top-2 -left-1 text-6xl font-black text-indigo-100 leading-none select-none">"</span>
-              <p className="text-base text-slate-700 leading-loose font-medium pl-6 pt-4 italic">
+              <p className="text-base text-slate-700 leading-loose font-medium pl-6 pt-4 italic whitespace-pre-wrap">
                 {data.deskripsi}
               </p>
               <span className="text-indigo-100 text-6xl font-black leading-none float-right -mt-4 select-none">"</span>

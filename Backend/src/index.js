@@ -6,6 +6,7 @@ import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
 import profileRoutes from './routes/profile.js';
+import duplicateRoutes from './routes/duplicate.js';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -29,6 +30,7 @@ app.use((req, res, next) => {
 app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/duplicate', duplicateRoutes);
 app.use('/api/profile', profileRoutes);
 
 app.get('/api/health', (req, res) => {
