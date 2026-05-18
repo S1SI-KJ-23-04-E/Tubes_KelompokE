@@ -309,6 +309,31 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
+export async function updateCatatanLaporan(id, catatan) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Anda belum login.');
+
+    const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+    const res = await fetch(`${API_URL}/admin/laporan/${id}/catatan`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}` 
+      },
+      body: JSON.stringify({ catatan })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menyimpan catatan');
+    
+    return data;
+  } catch (error) {
+    console.error('Error in updateCatatanLaporan:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
   return updateLaporanStatus(id, 'done', fileBukti, keterangan);
 }

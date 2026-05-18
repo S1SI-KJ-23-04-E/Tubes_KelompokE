@@ -6,11 +6,13 @@ import {
   getAllLaporan, 
   deleteLaporan,
   updateLaporanStatus,
-  getKendalaByKecamatan
+  getKendalaByKecamatan,
+  updateCatatanLaporan
 } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
-import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle } from 'lucide-react';
+import { CatatanModal, StatusUpdateModal, DeleteConfirmModal, AlertModal } from '../components/Modals';
+import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle, MessageSquare } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -164,6 +166,11 @@ export default function LaporanList() {
     setLoading(false);
   };
 
+  const [catatanModal, setCatatanModal] = useState({ open: false, id: null, currentCatatan: '', isViewOnly: false });
+  const [statusModal, setStatusModal] = useState({ open: false, id: null, nextStatus: '', statusLabel: '' });
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'error' });
+
   const handleUpdatePriority = async (id, priority) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -174,25 +181,60 @@ export default function LaporanList() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        console.error('Priority update failed:', json);
-        alert('Gagal mengubah prioritas: ' + (json.error || 'Unknown error'));
+        setAlertModal({ open: true, title: 'Gagal', message: (json.error || 'Terjadi kesalahan'), type: 'error' });
         return;
       }
       loadData();
-    } catch (err) { console.error(err); alert('Gagal mengubah prioritas: ' + err.message); }
+    } catch (err) { setAlertModal({ open: true, title: 'Error', message: err.message, type: 'error' }); }
   };
 
-  const handleUpdateStatus = async (id, status) => {
-    const ket = window.prompt(`Update status ke ${status}? Catatan (opsional):`);
-    if (ket === null) return;
-    const { success } = await updateLaporanStatus(id, status, null, ket);
-    if (success) loadData();
+  const handleUpdateStatus = (id, status) => {
+    const label = STATUS_CONFIG[status]?.label || status;
+    setStatusModal({ open: true, id, nextStatus: status, statusLabel: label });
+  };
+
+  const submitStatusUpdate = async (id, status, keterangan) => {
+    const { success, error } = await updateLaporanStatus(id, status, null, keterangan);
+    if (success) {
+      loadData();
+      setStatusModal({ open: false, id: null, nextStatus: '', statusLabel: '' });
+    } else {
+      setAlertModal({ open: true, title: 'Gagal', message: error || 'Gagal update status', type: 'error' });
+    }
+  };
+
+  const openCatatanModal = (id, currentCatatan, isViewOnly) => {
+    setCatatanModal({ open: true, id, currentCatatan: currentCatatan || '', isViewOnly });
+  };
+
+  const closeCatatanModal = () => {
+    setCatatanModal({ open: false, id: null, currentCatatan: '', isViewOnly: false });
+  };
+
+  const submitCatatanModal = async (newCatatan) => {
+    if (catatanModal.id && !catatanModal.isViewOnly) {
+      const res = await updateCatatanLaporan(catatanModal.id, newCatatan);
+      if (res.success) {
+        loadData();
+        closeCatatanModal();
+      } else {
+        setAlertModal({ open: true, title: 'Gagal', message: res.error || 'Gagal simpan catatan', type: 'error' });
+      }
+    }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Hapus laporan?')) return;
-    const { success } = await deleteLaporan(id);
-    if (success) loadData();
+    setDeleteModal({ open: true, id });
+  };
+
+  const confirmDelete = async (id) => {
+    const { success, error } = await deleteLaporan(id);
+    if (success) {
+      loadData();
+      setDeleteModal({ open: false, id: null });
+    } else {
+      setAlertModal({ open: true, title: 'Gagal', message: error || 'Gagal menghapus laporan', type: 'error' });
+    }
   };
 
   if (authLoading) return <div className="p-20 text-center text-slate-400 font-bold">Memuat...</div>;
@@ -322,17 +364,54 @@ export default function LaporanList() {
             activeTab === 'kendala' ? (
               <KendalaAdminView kendala={kendalaList} searchQuery={searchQuery} />
             ) : (
-              <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} profile={profile} searchQuery={searchQuery} />
+              <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} onCatatan={openCatatanModal} profile={profile} searchQuery={searchQuery} />
             )
           ) : (
             activeTab === 'publik' ? <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
           )
         )}
       </main>
+
+      {/* Modals */}
+      {catatanModal.open && (
+        <CatatanModal 
+          isOpen={catatanModal.open}
+          isViewOnly={catatanModal.isViewOnly}
+          initialCatatan={catatanModal.currentCatatan}
+          onClose={closeCatatanModal}
+          onSubmit={submitCatatanModal}
+        />
+      )}
+
+      {statusModal.open && (
+        <StatusUpdateModal 
+          isOpen={statusModal.open}
+          statusLabel={statusModal.statusLabel}
+          onClose={() => setStatusModal({ ...statusModal, open: false })}
+          onSubmit={(ket) => submitStatusUpdate(statusModal.id, statusModal.nextStatus, ket)}
+        />
+      )}
+
+      {deleteModal.open && (
+        <DeleteConfirmModal 
+          isOpen={deleteModal.open}
+          onClose={() => setDeleteModal({ ...deleteModal, open: false })}
+          onConfirm={() => confirmDelete(deleteModal.id)}
+        />
+      )}
+
+      {alertModal.open && (
+        <AlertModal 
+          isOpen={alertModal.open}
+          title={alertModal.title}
+          message={alertModal.message}
+          type={alertModal.type}
+          onClose={() => setAlertModal({ ...alertModal, open: false })}
+        />
+      )}
     </div>
   );
 }
-
 function InlineLaporanRedirect() {
   const navigate = useNavigate();
   return (
@@ -357,7 +436,7 @@ function InlineLaporanRedirect() {
   );
 }
 
-function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQuery }) {
+function AdminView({ laporan, activeTab, onStatus, onPriority, onCatatan, profile, searchQuery }) {
   const isPetugas = profile?.role === 'petugas';
 
   // Filter by tab status
@@ -385,9 +464,15 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQu
     });
   }
 
-  if (!filteredLaporan || filteredLaporan.length === 0) return <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm"><Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" /><p className="font-medium">Tidak ada laporan di kategori ini.</p></div>;
+  if (!filteredLaporan || filteredLaporan.length === 0) {
+    return (
+      <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
+        <Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" />
+        <p className="font-medium">Tidak ada laporan di kategori ini.</p>
+      </div>
+    );
+  }
   
-  // Only allow priority change on masuk & progress tabs, only for admin kecamatan
   const showPriority = activeTab === 'masuk' || activeTab === 'progress';
 
   return (
@@ -407,6 +492,8 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQu
         const isRejected = item.status === "rejected";
         const pCfg = PRIORITY_CONFIG[finalPriority];
 
+        const canAddCatatan = ['pending', 'verified', 'in_progress'].includes(item.status);
+
         return (
           <div key={item.id} className={`bg-white rounded-2xl border ${finalPriority === 'high' ? 'border-red-200 shadow-red-50' : 'border-slate-200'} p-6 flex flex-col md:flex-row justify-between gap-6 shadow-sm hover:shadow-lg transition-all duration-300 relative animate-stagger card-hover`} style={{ animationDelay: `${idx * 50}ms` }}>
             {finalPriority === 'high' && <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500 rounded-l-2xl transition-all" />}
@@ -415,6 +502,17 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQu
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border ${pCfg.color} transition-all`}>{pCfg.label}</span>
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${cfg.badge} transition-all status-breathing`}>{cfg.label}</span>
+                
+                {canAddCatatan && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); onCatatan(item.id, item.catatan, isPetugas); }}
+                    className={`p-1 rounded-md transition-all ${item.catatan ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                    title="Catatan Tambahan"
+                  >
+                    <MessageSquare size={14} />
+                  </button>
+                )}
+
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider transition-colors">{new Date(item.created_at).toLocaleString('id-ID')}</span>
               </div>
               <h3 className="font-bold text-slate-900 text-xl mb-1 leading-tight transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h3>
@@ -443,79 +541,79 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, profile, searchQu
                   )}
                </div>
                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                    <Clock size={12}/> Update Status
+                  </p>
+
                   <div className="flex flex-col gap-2">
-  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-    <Clock size={12}/> Update Status
-  </p>
+                    {/* VERIFIKASI */}
+                    {canModerate && item.status === 'pending' && (
+                      <button 
+                        onClick={() => onStatus(item.id, 'verified')}
+                        className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 py-2.5 rounded-xl text-xs font-bold transition-all"
+                      >
+                        Verifikasi Laporan
+                      </button>
+                    )}
 
-  {/* VERIFIKASI */}
-  {canModerate && item.status === 'pending' && (
-    <button 
-      onClick={() => onStatus(item.id, 'verified')}
-      className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 py-2.5 rounded-xl text-xs font-bold"
-    >
-      Verifikasi Laporan
-    </button>
-  )}
+                    {/* PROGRESS */}
+                    {canWorkAction && (
+                      <>
+                        {item.status === 'verified' && (
+                          <button 
+                            onClick={() => onStatus(item.id, 'in_progress')}
+                            className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold transition-all"
+                          >
+                            Mulai Perbaikan
+                          </button>
+                        )}
 
-  {/* PROGRESS */}
-    {canWorkAction && (
-      <>
-        {item.status === 'verified' && (
-          <button 
-            onClick={() => onStatus(item.id, 'in_progress')}
-            className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold"
-          >
-            Mulai Perbaikan
-          </button>
-        )}
+                        {item.status === 'pending' && (
+                          <p className="text-xs text-gray-400 italic">
+                            Menunggu verifikasi admin
+                          </p>
+                        )}
+                      </>
+                    )}
 
-        {item.status === 'pending' && (
-          <p className="text-xs text-gray-400">
-            Menunggu verifikasi admin
-          </p>
-        )}
-      </>
-    )}
+                    {/* SELESAI */}
+                    {canWorkAction && item.status === 'in_progress' && !(item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
+                      <Link 
+                        to={`/laporan/${item.id}`}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-black text-center transition-all shadow-md shadow-emerald-100"
+                      >
+                        Upload Bukti Selesai
+                      </Link>
+                    )}
 
-  {/* SELESAI */}
-  {canWorkAction && item.status === 'in_progress' && !(item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
-    <Link 
-      to={`/laporan/${item.id}`}
-      className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-black text-center"
-    >
-      Upload Bukti Selesai
-    </Link>
-  )}
+                    {/* VERIFIKASI SELESAI OLEH ADMIN KECAMATAN */}
+                    {canModerate && item.status === 'in_progress' && (item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
+                      <button 
+                        onClick={() => onStatus(item.id, 'done')}
+                        className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black text-center transition-all shadow-md shadow-green-100"
+                      >
+                        Selesai
+                      </button>
+                    )}
 
-  {/* VERIFIKASI SELESAI OLEH ADMIN KECAMATAN */}
-  {canModerate && item.status === 'in_progress' && (item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
-    <button 
-      onClick={() => onStatus(item.id, 'done')}
-      className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black text-center"
-    >
-      Selesai
-    </button>
-  )}
-
-  {/* TOLAK */}
-  {canModerate && item.status === 'pending' && !isDone && !isRejected && (
-  <button 
-    onClick={() => onStatus(item.id, 'rejected')}
-    className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl"
-  >
-    Tolak Laporan
-  </button>
-  )}
-  </div>
-                </div>
-              </div>
+                    {/* TOLAK */}
+                    {canModerate && item.status === 'pending' && !isDone && !isRejected && (
+                      <button 
+                        onClick={() => onStatus(item.id, 'rejected')}
+                        className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all"
+                      >
+                        Tolak Laporan
+                      </button>
+                    )}
+                  </div>
+               </div>
             </div>
-          );
-        })}
-      </div>
-    );
-  }
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function DaftarWargaView({ laporan, searchQuery = '', filterStatus = 'all' }) {
   const q = searchQuery.toLowerCase().trim();
