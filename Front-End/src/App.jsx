@@ -7,103 +7,190 @@ import ProfileUpdate from './pages/ProfileUpdate';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { LogOut } from 'lucide-react';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SuperAdminRoute from "./components/SuperAdminRoute";
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+
   const location = useLocation();
 
-  if (loading) return <div className="p-8 text-center text-slate-500 font-bold">Memuat...</div>;
-  
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-slate-500 font-bold">
+        Memuat...
+      </div>
+    );
+  }
+
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   return children;
 }
 
-// Navbar Component
+
+// ===============================
+// NAVBAR
+// ===============================
 function Navbar() {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout } =
+    useAuth();
 
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        
+
         {/* LOGO */}
         <div className="flex items-center space-x-3 cursor-pointer">
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-200">
             S
           </div>
-          <span className="font-extrabold text-2xl tracking-tight text-slate-800">SIMIKOT</span>
+
+          <span className="font-extrabold text-2xl tracking-tight text-slate-800">
+            SIMIKOT
+          </span>
         </div>
-        
+
         {/* USER */}
         {user && (
           <div className="flex items-center space-x-4">
+
             <Link
               to="/profile"
               className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition"
             >
               Profil
             </Link>
+
             <span className="text-sm font-bold text-slate-600 hidden sm:block">
               Halo, {profile?.nama || user.email}
             </span>
 
-            <button 
+            <button
               onClick={logout}
               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
               title="Logout"
             >
               <LogOut size={20} />
-              <span className="text-sm font-bold hidden sm:block">Keluar</span>
+
+              <span className="text-sm font-bold hidden sm:block">
+                Keluar
+              </span>
             </button>
+
           </div>
         )}
+
       </div>
     </nav>
   );
 }
 
+
+// ===============================
+// APP ROUTES
+// ===============================
 function AppRoutes() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
+
+      {/* NAVBAR */}
       <Navbar />
+
+      {/* MAIN CONTENT */}
       <main className="pb-20">
         <Routes>
 
-          {/* Public */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          {/* ===================== */}
+          {/* PUBLIC ROUTES */}
+          {/* ===================== */}
 
-          {/* Default */}
-          <Route path="/" element={<Navigate to="/laporan" replace />} />
+          <Route
+            path="/login"
+            element={<Login />}
+          />
 
-          {/* Protected */}
-          <Route path="/laporan" element={
-            <ProtectedRoute>
-              <LaporanList />
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/register"
+            element={<Register />}
+          />
 
-          <Route path="/laporan/baru" element={
-            <ProtectedRoute>
-              <LaporanForm />
-            </ProtectedRoute>
-          } />
+          {/* ===================== */}
+          {/* DEFAULT */}
+          {/* ===================== */}
 
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <ProfileUpdate />
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to="/laporan"
+                replace
+              />
+            }
+          />
 
-          <Route path="/laporan/:id" element={
-            <ProtectedRoute>
-              <LaporanDetail />
-            </ProtectedRoute>
-          } />
+          {/* ===================== */}
+          {/* PROTECTED ROUTES */}
+          {/* ===================== */}
+
+          {/* LIST LAPORAN */}
+          <Route
+            path="/laporan"
+            element={
+              <ProtectedRoute>
+                <LaporanList />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ DASHBOARD */}
+          <Route
+            path="/dashboard"
+            element={
+              <SuperAdminRoute>
+                <SuperAdminDashboard />
+              </SuperAdminRoute>
+            }
+          />
+
+          {/* FORM LAPORAN */}
+          <Route
+            path="/laporan/baru"
+            element={
+              <ProtectedRoute>
+                <LaporanForm />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* PROFILE */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfileUpdate />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* DETAIL LAPORAN */}
+          <Route
+            path="/laporan/:id"
+            element={
+              <ProtectedRoute>
+                <LaporanDetail />
+              </ProtectedRoute>
+            }
+          />
 
         </Routes>
       </main>
@@ -111,6 +198,10 @@ function AppRoutes() {
   );
 }
 
+
+// ===============================
+// MAIN APP
+// ===============================
 function App() {
   return (
     <AuthProvider>

@@ -28,7 +28,7 @@ const AdminPage = () => {
     fetchLaporan();
   }, []);
 
-  // ✅ TAMBAHAN (TIDAK MENGGANGGU YANG LAMA)
+  // ✅ TAMBAHAN - Fetch kendala berdasarkan kecamatan user
   useEffect(() => {
     const fetchKendala = async () => {
     console.log("USER:", user);
@@ -54,7 +54,7 @@ const AdminPage = () => {
     <div className="p-5">
       <h1 className="text-xl font-bold mb-4">Dashboard Kecamatan</h1>
 
-      {/* ✅ BAGIAN LAMA (TIDAK DIUBAH) */}
+      {/* ✅ TERBARU */}
       {laporan.map((item) => (
         <ReportCard key={item.id_laporan} laporan={item} onUpdate={fetchLaporan} />
       ))}
