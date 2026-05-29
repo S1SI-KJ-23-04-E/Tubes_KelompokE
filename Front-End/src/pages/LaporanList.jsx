@@ -13,8 +13,32 @@ import {
 } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
+import SuperAdminDashboard from "./SuperAdminDashboard";
 import { CatatanModal, StatusUpdateModal, DeleteConfirmModal, AlertModal } from '../components/Modals';
-import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle, MessageSquare, Copy, GitMerge, MapPin } from 'lucide-react';
+import {
+  Plus,
+  List,
+  Clock,
+  ChevronRight,
+  FileText,
+  Trash2,
+  Inbox,
+  ShieldCheck,
+  CheckCircle2,
+  Search,
+  ArrowUpCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PenSquare,
+  Globe,
+  Activity,
+  AlertTriangle,
+  MessageSquare,
+  Copy,
+  GitMerge,
+  MapPin,
+  BarChart3
+} from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -252,11 +276,32 @@ export default function LaporanList() {
     { id: 'history', label: 'History Saya', icon: Clock },
     { id: 'publik', label: 'Laporan Publik', icon: Globe },
   ];
-  const adminTabsList = [
-    { id: 'masuk', label: 'Laporan Masuk', icon: Inbox },
-    { id: 'progress', label: 'Laporan Progress', icon: Activity },
-    { id: 'selesai', label: 'Laporan Selesai', icon: CheckCircle2 },
-  ];
+  const adminTabsList = [];
+  if (profile?.role === "super_admin") {
+    adminTabsList.push({
+      id: "dashboard",
+      label: "Dashboard Analytics",
+      icon: BarChart3,
+    });
+  }
+
+  adminTabsList.push(
+    {
+      id: "masuk",
+      label: "Laporan Masuk",
+      icon: Inbox,
+    },
+    {
+      id: "progress",
+      label: "Laporan Progress",
+      icon: Activity,
+    },
+    {
+      id: "selesai",
+      label: "Laporan Selesai",
+      icon: CheckCircle2,
+    }
+  );
   if (canModerate) {
     adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle });
     adminTabsList.push({ id: 'duplikat', label: 'Deteksi Duplikat', icon: Copy });
@@ -296,6 +341,13 @@ export default function LaporanList() {
   const tabs = isAdmin ? adminTabsList : wargaTabs;
 
   const getPageTitle = () => {
+    if (
+      profile?.role === "super_admin" &&
+      activeTab === "dashboard"
+    ) {
+      return "Dashboard Super Admin";
+    }
+
     if (isAdmin) {
        if (resolvedAdminTab === 'masuk') return 'Laporan Masuk';
        if (resolvedAdminTab === 'progress') return 'Laporan Progress';
@@ -307,11 +359,31 @@ export default function LaporanList() {
     if (activeTab === 'history') return 'History Laporan Saya';
     return 'Laporan Publik';
   };
+
   const getPageSubtitle = () => {
-    if (isAdmin) return `Kecamatan ${profile?.kecamatan?.nama_kecamatan || ''}`;
-    if (activeTab === 'buat') return 'Laporkan kerusakan infrastruktur di kota Anda';
-    if (activeTab === 'history') return 'Lihat riwayat laporan yang pernah Anda buat';
-    return 'Laporan dari warga lain di seluruh kota';
+
+    if (
+      profile?.role === "super_admin" &&
+      activeTab === "dashboard"
+    ) {
+      return "Monitoring performa penyelesaian laporan seluruh kecamatan";
+    }
+
+    if (isAdmin) {
+      return `Kecamatan ${
+        profile?.kecamatan?.nama_kecamatan || ""
+      }`;
+    }
+
+    if (activeTab === "buat") {
+      return "Laporkan kerusakan infrastruktur di kota Anda";
+    }
+
+    if (activeTab === "history") {
+      return "Lihat riwayat laporan yang pernah Anda buat";
+    }
+
+    return "Laporan dari warga lain di seluruh kota";
   };
 
   return (
@@ -355,17 +427,26 @@ export default function LaporanList() {
       {/* Main Content */}
       <main className="flex-1 min-w-0 p-6 md:p-10 animate-fade-in-up">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <div className="flex-1">
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight transition-colors">{getPageTitle()}</h1>
-            <p className="text-slate-500 text-sm mt-1 font-medium transition-colors">{getPageSubtitle()}</p>
-          </div>
+          {activeTab !== "dashboard" && (
+            <div className="flex-1 animate-fade-in-up">
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {getPageTitle()}
+              </h1>
+
+              <p className="text-slate-500 text-sm mt-1 font-medium">
+                {getPageSubtitle()}
+              </p>
+            </div>
+            )}
 
           <div className="flex gap-3 w-full lg:w-auto">
             {isAdmin && (
+              activeTab !== "dashboard" && 
               <div className="relative flex-1 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors" size={16} />
                 <input type="text" placeholder="Cari berdasarkan judul atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-80 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
+              
             )}
             {!isAdmin && activeTab === 'publik' && (
               <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
@@ -401,25 +482,61 @@ export default function LaporanList() {
         ) : loading ? (
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
-          isAdmin ? (
-            activeTab === 'kendala' ? (
-              <KendalaAdminView kendala={kendalaList} searchQuery={searchQuery} />
-            ) : activeTab === 'duplikat' ? (
-              <DuplikatAdminView 
-                groups={duplicateGroups} 
-                loading={duplicateLoading} 
-                radius={duplicateRadius}
-                onRadiusChange={setDuplicateRadius}
-                onMerge={handleMerge}
-                searchQuery={searchQuery}
-              />
-            ) : (
-              <AdminView laporan={laporanMasuk || []} activeTab={resolvedAdminTab} onStatus={handleUpdateStatus} onPriority={handleUpdatePriority} onCatatan={openCatatanModal} profile={profile} searchQuery={searchQuery} />
-            )
+
+        isAdmin ? (
+          activeTab === "dashboard" ? (
+
+            <SuperAdminDashboard />
+
+          ) : activeTab === "kendala" ? (
+
+            <KendalaAdminView
+              kendala={kendalaList}
+              searchQuery={searchQuery}
+            />
+
+          ) : activeTab === "duplikat" ? (
+
+            <DuplikatAdminView
+              groups={duplicateGroups}
+              loading={duplicateLoading}
+              radius={duplicateRadius}
+              onRadiusChange={setDuplicateRadius}
+              onMerge={handleMerge}
+              searchQuery={searchQuery}
+            />
+
           ) : (
-            activeTab === 'publik' ? <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} /> : <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
+
+            <AdminView
+              laporan={laporanMasuk || []}
+              activeTab={resolvedAdminTab}
+              onStatus={handleUpdateStatus}
+              onPriority={handleUpdatePriority}
+              onCatatan={openCatatanModal}
+              profile={profile}
+              searchQuery={searchQuery}
+            />
+
           )
-        )}
+
+        ) : (
+
+          activeTab === "publik" ? (
+            <DaftarWargaView
+              laporan={laporanPublik}
+              searchQuery={publicSearchQuery}
+            />
+          ) : (
+            <HistoryWargaView
+              laporan={laporanSaya}
+              onDelete={handleDelete}
+            />
+          )
+
+        )
+      )}
+
       </main>
 
       {/* Modals */}
