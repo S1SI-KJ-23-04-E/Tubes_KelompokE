@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import UploadBuktiModal from '../components/UploadBuktiModal';
 import KendalaForm from '../components/KendalaForm';
+import { createNotifikasi } from '../services/notifikasiService';
 import {
   ArrowLeft, Clock, MapPin, CheckCircle2, User,
   ThumbsUp, AlertTriangle, FileText, Camera, Star,
@@ -232,6 +233,29 @@ export default function LaporanDetail() {
     if (success) { setKendalaModalOpen(false); loadData(); }
     else alert('Gagal mengirim kendala: ' + (error || 'Error tidak diketahui'));
   };
+ const handleKirimReminder = async () => {
+  const pesanReminder = prompt(
+    'Tulis pesan reminder untuk petugas:',
+    `Laporan "${data.deskripsi}" diminta untuk segera ditindaklanjuti.`
+  );
+
+  if (!pesanReminder) return;
+
+  try {
+    await createNotifikasi({
+      laporan_id: data.id,
+      pengirim_id: user.id,
+      penerima_role: 'petugas',
+      judul: 'Peringatan',
+      pesan: pesanReminder
+    });
+
+    alert('Notifikasi berhasil dikirim');
+  } catch (err) {
+    console.error(err);
+    alert('Gagal mengirim notifikasi');
+  }
+};
 
   /* ── LOADING ── */
   if (loading) return (
@@ -529,6 +553,15 @@ export default function LaporanDetail() {
                             <ArrowUpCircle size={14} /> Upload Bukti Selesai
                           </button>
                         )}
+
+                        {canModerate && (
+                          <button
+                           onClick={handleKirimReminder}
+                          className="flex-1 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl text-[10px] font-black transition-all"
+  >
+                          Kirim Reminder
+                        </button>
+                        )}
                         {profile?.role === 'petugas' && (
                           <button onClick={() => setKendalaModalOpen(true)}
                             className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-amber-600 border border-white/10 hover:border-amber-600 text-white py-3 rounded-xl text-[10px] font-black transition-all">
@@ -544,11 +577,22 @@ export default function LaporanDetail() {
                       </button>
                     )}
                     {canModerate && data.status === 'in_progress' && !data.bukti && (
-                      <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
-                        <XCircle size={14} className="text-slate-600 shrink-0" />
-                        <p className="text-[10px] text-slate-600 leading-snug">Menunggu petugas mengunggah bukti selesai.</p>
-                      </div>
-                    )}
+  <div className="space-y-2">
+    <button
+      onClick={handleKirimReminder}
+      className="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+    >
+      Kirim Reminder ke Petugas
+    </button>
+
+    <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
+      <XCircle size={14} className="text-slate-600 shrink-0" />
+      <p className="text-[10px] text-slate-600 leading-snug">
+        Menunggu petugas mengunggah bukti selesai.
+      </p>
+    </div>
+  </div>
+)}
                     {canModerate && !['pending', 'in_progress'].includes(data.status) && (
                       <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
                         <XCircle size={14} className="text-slate-600 shrink-0" />
@@ -556,7 +600,7 @@ export default function LaporanDetail() {
                       </div>
                     )}
                   </div>
-                </div>
+        </div>
               </div>
             </div>
           </div>

@@ -6,9 +6,13 @@ import LaporanDetail from './pages/LaporanDetail';
 import ProfileUpdate from './pages/ProfileUpdate';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { LogOut } from 'lucide-react';
+import { LogOut, Bell } from 'lucide-react';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import SuperAdminRoute from "./components/SuperAdminRoute";
+import { getNotifikasiPetugas } from './services/notifikasiService';
+import { useEffect, useState } from 'react';
+import NotifikasiPetugas from './pages/NotifikasiPetugas';
+import { supabase } from './lib/supabase';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -45,6 +49,39 @@ function Navbar() {
   const { user, profile, logout } =
     useAuth();
 
+    const [jumlahNotif, setJumlahNotif] = useState(0);
+
+useEffect(() => {
+  if (profile?.role === 'petugas') {
+    loadNotif();
+
+    const channel = supabase
+      .channel('notifikasi-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifikasi',
+        },
+        () => {
+          loadNotif();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+}, [profile]);
+
+const loadNotif = async () => {
+  const data = await getNotifikasiPetugas();
+  const unread = data.filter(item => !item.is_read);
+  setJumlahNotif(unread.length);
+};
+
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -70,6 +107,18 @@ function Navbar() {
             >
               Profil
             </Link>
+
+            {profile?.role === 'petugas' && (
+  <Link to="/notifikasi" className="relative">
+    <Bell size={22} className="text-slate-600 hover:text-indigo-600 transition" />
+
+    {jumlahNotif > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+        {jumlahNotif}
+      </span>
+    )}
+  </Link>
+)}
 
             <span className="text-sm font-bold text-slate-600 hidden sm:block">
               Halo, {profile?.nama || user.email}
@@ -192,6 +241,14 @@ function AppRoutes() {
             }
           />
 
+<Route
+  path="/notifikasi"
+  element={
+    <ProtectedRoute>
+      <NotifikasiPetugas />
+    </ProtectedRoute>
+  }
+/>
         </Routes>
       </main>
     </div>
@@ -213,3 +270,4 @@ function App() {
 }
 
 export default App;
+
