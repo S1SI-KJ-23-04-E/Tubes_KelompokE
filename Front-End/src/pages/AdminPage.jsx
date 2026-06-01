@@ -2,17 +2,14 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import ReportCard from "../components/ReportCard";
 
-// ✅ TAMBAHAN
 import { getKendalaByKecamatan } from "../services/laporanService";
 import { useAuth } from "../contexts/AuthContext";
 
 const AdminPage = () => {
   const [laporan, setLaporan] = useState([]);
 
-  // ✅ TAMBAHAN
   const [kendalaList, setKendalaList] = useState([]);
 
-  // ✅ TAMBAHAN
   const { user } = useAuth();
 
   const fetchLaporan = async () => {
@@ -28,7 +25,6 @@ const AdminPage = () => {
     fetchLaporan();
   }, []);
 
-  // ✅ TAMBAHAN - Fetch kendala berdasarkan kecamatan user
   useEffect(() => {
     const fetchKendala = async () => {
     console.log("USER:", user);

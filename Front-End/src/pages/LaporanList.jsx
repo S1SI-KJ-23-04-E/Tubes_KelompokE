@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
 import SuperAdminDashboard from "./SuperAdminDashboard";
+import AdminKecamatanDashboard from "./AdminKecamatanDashboard";
 import { CatatanModal, StatusUpdateModal, DeleteConfirmModal, AlertModal } from '../components/Modals';
 import {
   Plus,
@@ -77,7 +78,7 @@ export default function LaporanList() {
   const isAdmin = profile?.role === 'kecamatan' || profile?.role === 'petugas' || profile?.role === 'super_admin';
   const canModerate = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || (isAdmin ? 'masuk' : 'buat'));
-  const adminTabs = new Set(['masuk', 'progress', 'selesai']);
+  const adminTabs = new Set(['masuk', 'progress', 'selesai', 'dashboard', '__dashboard_kecamatan__']);
   if (canModerate) {
     adminTabs.add('kendala');
     adminTabs.add('duplikat');
@@ -285,6 +286,14 @@ export default function LaporanList() {
     });
   }
 
+  if (profile?.role === "kecamatan") {
+    adminTabsList.push({
+      id: "__dashboard_kecamatan__",
+      label: "Dashboard Penugasan",
+      icon: BarChart3,
+    });
+  }
+
   adminTabsList.push(
     {
       id: "masuk",
@@ -349,6 +358,7 @@ export default function LaporanList() {
     }
 
     if (isAdmin) {
+       if (activeTab === '__dashboard_kecamatan__') return 'Dashboard Penugasan';
        if (resolvedAdminTab === 'masuk') return 'Laporan Masuk';
        if (resolvedAdminTab === 'progress') return 'Laporan Progress';
        if (resolvedAdminTab === 'selesai') return 'Laporan Selesai';
@@ -485,9 +495,9 @@ export default function LaporanList() {
 
         isAdmin ? (
           activeTab === "dashboard" ? (
-
             <SuperAdminDashboard />
-
+          ) : activeTab === "__dashboard_kecamatan__" ? (
+            <AdminKecamatanDashboard />
           ) : activeTab === "kendala" ? (
 
             <KendalaAdminView

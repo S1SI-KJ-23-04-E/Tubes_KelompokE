@@ -101,6 +101,15 @@ const loadNotif = async () => {
         {user && (
           <div className="flex items-center space-x-4">
 
+            {/* {profile?.role === 'kecamatan' && (
+              <Link
+                to="/laporan?tab=__dashboard_kecamatan__"
+                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition"
+              >
+                Dashboard
+              </Link>
+            )} */}
+
             <Link
               to="/profile"
               className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition"
@@ -201,7 +210,7 @@ function AppRoutes() {
             }
           />
 
-          {/* ✅ DASHBOARD */}
+          {/* ✅ DASHBOARD SUPER ADMIN */}
           <Route
             path="/dashboard"
             element={
