@@ -76,7 +76,7 @@ function Input({ icon: Icon, focused, hasError, hasValue, ...props }) {
 
 /* ─── MAIN ─── */
 export default function ProfileUpdate() {
-  const { user } = useAuth();
+  const { user, updateProfileState } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ nama: "", alamat: "", no_hp: "" });
@@ -151,6 +151,11 @@ export default function ProfileUpdate() {
       setStatus("success");
       setStatusMsg("Profil berhasil diperbarui.");
       setOriginal({ ...form });
+      
+      // Perbarui state lokal di AuthContext supaya nama di navbar ikut berubah tanpa refresh
+      if (updateProfileState) {
+        updateProfileState({ nama: form.nama, alamat: form.alamat, no_hp: form.no_hp });
+      }
     } catch (err) {
       setStatus("error");
       setStatusMsg(err.message || "Terjadi kesalahan saat menyimpan.");

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { updateProfile } from "../services/profileService";
+import { updateProfile } from "../services/pProfileService";
+import { AlertModal } from '../components/Modals';
 
 export default function ProfilePage() {
   const [nama, setNama] = useState("");
   const [loading, setLoading] = useState(false);
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'error' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -12,9 +14,9 @@ export default function ProfilePage() {
     const res = await updateProfile(nama);
 
     if (res.success) {
-      alert("Profil berhasil diperbarui");
+      setAlertModal({ open: true, title: 'Sukses', message: 'Profil berhasil diperbarui', type: 'success' });
     } else {
-      alert(res.error);
+      setAlertModal({ open: true, title: 'Gagal', message: res.error, type: 'error' });
     }
 
     setLoading(false);
@@ -42,6 +44,16 @@ export default function ProfilePage() {
           {loading ? "Menyimpan..." : "Simpan"}
         </button>
       </form>
+
+      {alertModal.open && (
+        <AlertModal 
+          isOpen={alertModal.open}
+          title={alertModal.title}
+          message={alertModal.message}
+          type={alertModal.type}
+          onClose={() => setAlertModal({ ...alertModal, open: false })}
+        />
+      )}
     </div>
   );
 }

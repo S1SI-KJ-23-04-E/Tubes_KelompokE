@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ThumbsUp } from 'lucide-react';
-import { upvoteLaporan, checkUserUpvoted } from '../services/laporanService';
+import { Trash2, ThumbsUp, MessageSquare } from 'lucide-react';
+import { upvoteLaporan, checkUserUpvoted, updateCatatanLaporan } from '../services/laporanService';
 import { useAuth } from '../contexts/AuthContext';
+import { CatatanModal, AlertModal } from './Modals';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -42,6 +43,9 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
     if (res.success) setUpvoted(res.upvoted);
   };
 
+  const [catatanModal, setCatatanModal] = useState({ open: false, isViewOnly: false });
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'error' });
+
   const handleUpvote = async (e) => {
     e.preventDefault();
     if (loading || !user) return;
@@ -53,9 +57,32 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
       setLaporan(prev => ({ ...prev, upvote_count: res.upvote_count }));
       if (res.warning) console.warn(res.warning);
     } else {
-      alert(`Gagal: ${res.error}`);
+      setAlertModal({ open: true, title: 'Gagal', message: res.error, type: 'error' });
     }
     setLoading(false);
+  };
+
+  const handleCatatanClick = async (e) => {
+    e.preventDefault();
+    if (profile?.role === 'kecamatan' || profile?.role === 'super_admin') {
+      setCatatanModal({ open: true, isViewOnly: false });
+    } else if (profile?.role === 'petugas') {
+      if (laporan.catatan) {
+        setCatatanModal({ open: true, isViewOnly: true });
+      } else {
+        setAlertModal({ open: true, title: 'Informasi', message: 'Belum ada catatan dari admin.', type: 'info' });
+      }
+    }
+  };
+
+  const submitCatatan = async (newCatatan) => {
+    const res = await updateCatatanLaporan(id, newCatatan);
+    if (res.success) {
+      setLaporan(prev => ({ ...prev, catatan: newCatatan }));
+      setCatatanModal({ ...catatanModal, open: false });
+    } else {
+      setAlertModal({ open: true, title: 'Gagal', message: res.error || 'Gagal menyimpan catatan', type: 'error' });
+    }
   };
 
   const safeStatus = typeof status === 'string' && status.trim() ? status : 'pending';
@@ -75,7 +102,18 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
           <span className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${statusColors[safeStatus] || 'bg-gray-100'} status-breathing`}>
             {safeStatus.replace('_', ' ').toUpperCase()}
           </span>
-          <span className="text-xs text-gray-400 transition-all group-hover:text-indigo-400">{dateLabel}</span>
+          <div className="flex items-center gap-2">
+            {isInternalRole && ['pending', 'verified', 'in_progress'].includes(safeStatus) && (
+              <button
+                onClick={handleCatatanClick}
+                className={`p-1 rounded-md transition-all ${laporan.catatan ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                title="Catatan Tambahan"
+              >
+                <MessageSquare size={14} />
+              </button>
+            )}
+            <span className="text-xs text-gray-400 transition-all group-hover:text-indigo-400">{dateLabel}</span>
+          </div>
         </div>
       )}
       
@@ -90,7 +128,7 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
 
       <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50 transition-all">
         {!minimal ? (
-          !isInternalRole ? (
+          profile?.role === 'warga' ? (
             <button 
               onClick={handleUpvote}
               disabled={loading || !user}
@@ -131,6 +169,27 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
           </Link>
         </div>
       </div>
+
+      {/* Custom Modals */}
+      {catatanModal.open && (
+        <CatatanModal 
+          isOpen={catatanModal.open}
+          isViewOnly={catatanModal.isViewOnly}
+          initialCatatan={laporan.catatan}
+          onClose={() => setCatatanModal({ ...catatanModal, open: false })}
+          onSubmit={submitCatatan}
+        />
+      )}
+
+      {alertModal.open && (
+        <AlertModal 
+          isOpen={alertModal.open}
+          title={alertModal.title}
+          message={alertModal.message}
+          type={alertModal.type}
+          onClose={() => setAlertModal({ ...alertModal, open: false })}
+        />
+      )}
     </div>
   );
-}
+}

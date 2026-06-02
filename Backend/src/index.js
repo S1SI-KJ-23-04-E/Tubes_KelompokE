@@ -6,13 +6,19 @@ import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
 import profileRoutes from './routes/profile.js';
+import duplicateRoutes from './routes/duplicate.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 const app = express();
+
 const PORT = process.env.PORT || 8001;
 
 // ✅ CORS
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   credentials: true
 }));
 
@@ -27,10 +33,24 @@ app.use((req, res, next) => {
 
 // ✅ Routes
 app.use('/api/wilayah', wilayahRoutes);
+
 app.use('/api/laporan', laporanRoutes);
+
 app.use('/api/admin', adminRoutes);
+
+app.use(
+  '/api/admin/duplicate',
+  duplicateRoutes
+);
+
 app.use('/api/profile', profileRoutes);
 
+app.use(
+  '/api/dashboard',
+  dashboardRoutes
+);
+
+// ✅ Health Check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -38,22 +58,34 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ✅ 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route tidak ditemukan' });
+  res.status(404).json({
+    error: 'Route tidak ditemukan'
+  });
 });
 
+// ✅ Error Handler
 app.use((err, req, res, next) => {
   console.error('🔥 Server Error:', err);
-  res.status(500).json({ error: 'Internal Server Error' });
+
+  res.status(500).json({
+    error: 'Internal Server Error'
+  });
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`✅ Server running di http://localhost:${PORT}`);
+  console.log(
+    `✅ Server running di http://localhost:${PORT}`
+  );
 });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} sedang dipakai.`);
+    console.error(
+      `❌ Port ${PORT} sedang dipakai.`
+    );
+
     process.exit(1);
   }
 });

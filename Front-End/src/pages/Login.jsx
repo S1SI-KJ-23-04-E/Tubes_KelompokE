@@ -55,15 +55,22 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/laporan';
+  const successMsg = location.state?.message;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
-    const { success } = await login(email, password);
+    const result = await login(email, password);
     setLoading(false);
-    if (success) navigate(from, { replace: true });
-    else setErrorMsg('Email atau password yang kamu masukkan salah.');
+    if (result.success) {
+      const role = result.profile?.role;
+      if (role === 'kecamatan')   navigate('/laporan?tab=__dashboard_kecamatan__', { replace: true });
+      else if (role === 'super_admin') navigate('/dashboard', { replace: true });
+      else navigate(from, { replace: true });
+    } else {
+      setErrorMsg('Email atau password yang kamu masukkan salah.');
+    }
   };
 
   return (
@@ -141,6 +148,14 @@ export default function Login() {
               <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Selamat datang</h2>
               <p className="text-slate-400 text-sm font-medium mt-1.5">Masuk untuk melanjutkan ke dashboard.</p>
             </div>
+
+            {/* success */}
+            {successMsg && (
+              <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-2xl p-4 mb-6">
+                <AlertCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
+                <p className="text-sm font-semibold text-green-700 leading-snug">{successMsg}</p>
+              </div>
+            )}
 
             {/* error */}
             {errorMsg && (

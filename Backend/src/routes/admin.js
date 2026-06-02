@@ -20,10 +20,10 @@ router.get('/laporan/all', authenticate, async (req, res) => {
 
   if (error) return res.status(500).json({ success: false, error: error.message, data: [] });
 
-  const priorityWeight = { high: 3, normal: 2, low: 1 };
+  const priorityWeight = { high: 3, low: 1 };
   const sortedData = [...data].sort((a, b) => {
-    const weightA = priorityWeight[a.prioritas?.toLowerCase()] || 2;
-    const weightB = priorityWeight[b.prioritas?.toLowerCase()] || 2;
+    const weightA = priorityWeight[a.prioritas?.toLowerCase()] || 1;
+    const weightB = priorityWeight[b.prioritas?.toLowerCase()] || 1;
     if (weightB !== weightA) return weightB - weightA;
     return new Date(b.created_at) - new Date(a.created_at);
   });
@@ -86,6 +86,9 @@ router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
   }
 
   const { prioritas } = req.body;
+  if (!['high', 'low'].includes(prioritas)) {
+    return res.status(400).json({ success: false, error: 'Prioritas harus high atau low.' });
+  }
   const { error } = await supabaseAdmin
     .from('laporan')
     .update({ prioritas })
@@ -94,6 +97,23 @@ router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
   if (error) return res.status(500).json({ success: false, error: error.message });
   res.json({ success: true });
 });
+
+// PUT /api/admin/laporan/:id/catatan
+router.put('/laporan/:id/catatan', authenticate, async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin yang boleh menambahkan catatan.' });
+  }
+
+  const { catatan } = req.body;
+  const { error } = await supabaseAdmin
+    .from('laporan')
+    .update({ catatan })
+    .eq('id', req.params.id);
+
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, catatan });
+});
+
 
 // PUT /api/admin/laporan/:id/status
 router.put('/laporan/:id/status', authenticate, async (req, res) => {
