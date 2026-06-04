@@ -145,6 +145,7 @@ export default function Register() {
   const [showPass,    setShowPass]    = useState(false);
   const [focused,     setFocused]     = useState('');
   const [touched,     setTouched]     = useState({});
+  const [agreeTerms,  setAgreeTerms]  = useState(false);
 
   const { register } = useAuth();
   const navigate     = useNavigate();
@@ -181,7 +182,9 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setTouched({ nama: true, email: true, password: true });
+    setTouched({ nama: true, email: true, password: true, terms: true });
+
+    if (!agreeTerms) return;
 
     if (!email.endsWith('@gmail.com')) {
       return setErrorMsg('Hanya email dengan domain @gmail.com yang diizinkan.');
@@ -478,7 +481,7 @@ export default function Register() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !agreeTerms}
                   className="w-full flex items-center justify-center gap-2.5 bg-[#1e3a8a] hover:bg-[#172554] active:scale-[0.98] text-white font-black text-sm py-4 rounded-2xl transition-all duration-200 shadow-lg shadow-indigo-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? (
@@ -510,10 +513,52 @@ export default function Register() {
               </p>
             </div>
 
-            <p className="text-center text-[10px] text-slate-300 mt-4 font-medium leading-relaxed">
-              Dengan mendaftar, kamu menyetujui kebijakan privasi<br className="hidden sm:block" />
-              dan ketentuan layanan SIMIKOT.
-            </p>
+            {/* ── TERMS CHECKBOX ── */}
+            <div className="mt-5">
+              <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 select-none ${
+                agreeTerms
+                  ? 'bg-indigo-50/60 border-indigo-300'
+                  : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
+              }`}>
+                {/* custom checkbox */}
+                <div className="relative shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={agreeTerms}
+                    onChange={e => setAgreeTerms(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
+                    agreeTerms
+                      ? 'bg-indigo-600 border-indigo-600 shadow-md shadow-indigo-200'
+                      : 'bg-white border-slate-300'
+                  }`}>
+                    {agreeTerms && <Check size={12} className="text-white" strokeWidth={3} />}
+                  </div>
+                </div>
+                {/* text */}
+                <span className={`text-xs font-medium leading-relaxed transition-colors ${
+                  agreeTerms ? 'text-slate-700' : 'text-slate-500'
+                }`}>
+                  Saya telah membaca dan menyetujui{' '}
+                  <span className="font-bold text-indigo-600 underline underline-offset-2 cursor-pointer">
+                    Kebijakan Privasi
+                  </span>{' '}
+                  dan{' '}
+                  <span className="font-bold text-indigo-600 underline underline-offset-2 cursor-pointer">
+                    Ketentuan Layanan
+                  </span>{' '}
+                  SIMIKOT.
+                </span>
+              </label>
+
+              {/* hint jika belum dicentang & sudah klik submit */}
+              {!agreeTerms && touched.terms && (
+                <p className="flex items-center gap-1.5 text-[11px] text-red-500 font-semibold mt-1.5 px-1">
+                  <AlertCircle size={11} /> Kamu menyetujui kebijakan untuk melanjutkan
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
