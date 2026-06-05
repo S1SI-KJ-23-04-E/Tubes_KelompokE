@@ -8,6 +8,7 @@ import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
 import beritaRoutes from './routes/berita.js';
 import profileRoutes from './routes/profile.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -48,6 +49,7 @@ app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/berita', beritaRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

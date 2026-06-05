@@ -66,7 +66,7 @@ export default function Login() {
     if (result.success) {
       const role = result.profile?.role;
       if (role === 'kecamatan')   navigate('/laporan?tab=__dashboard_kecamatan__', { replace: true });
-      else if (role === 'super_admin') navigate('/dashboard', { replace: true });
+      else if (role === 'super_admin') navigate('/laporan?tab=dashboard', { replace: true });
       else navigate(from, { replace: true });
     } else {
       setErrorMsg('Email atau password yang kamu masukkan salah.');

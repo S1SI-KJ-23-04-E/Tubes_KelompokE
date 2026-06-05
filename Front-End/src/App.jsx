@@ -89,6 +89,12 @@ function AppRoutes() {
             </ProtectedRoute>
           } />
 
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Navigate to="/laporan?tab=dashboard" replace />
+            </ProtectedRoute>
+          } />
+
           <Route path="/laporan/baru" element={
             <ProtectedRoute>
               <LaporanForm />
