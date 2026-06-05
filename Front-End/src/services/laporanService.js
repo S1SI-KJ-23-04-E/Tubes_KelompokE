@@ -22,6 +22,8 @@ export async function createLaporan(data) {
           deskripsi: data.deskripsi,
           alamat: data.alamat,
           foto_url: data.foto_url,
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
           status: 'pending'
         }
       ])
@@ -309,6 +311,31 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
   }
 }
 
+export async function updateCatatanLaporan(id, catatan) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Anda belum login.');
+
+    const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+    const res = await fetch(`${API_URL}/admin/laporan/${id}/catatan`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}` 
+      },
+      body: JSON.stringify({ catatan })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menyimpan catatan');
+    
+    return data;
+  } catch (error) {
+    console.error('Error in updateCatatanLaporan:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
   return updateLaporanStatus(id, 'done', fileBukti, keterangan);
 }
@@ -408,6 +435,83 @@ export async function upvoteLaporan(laporanId) {
     return data;
   } catch (error) {
     console.error('Error in upvoteLaporan:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ===============================
+// SMART DUPLICATE DETECTION
+// ===============================
+
+/**
+ * Ambil grup laporan duplikat berdasarkan kecamatan
+ * @param {string} kecamatanId - UUID kecamatan
+ * @param {number} radius - Radius dalam meter (1-50, default 50)
+ * @returns {Promise<{success: boolean, data: Array, total_groups: number}>}
+ */
+export async function getDuplicateGroups(kecamatanId, radius = 50) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Anda belum login.');
+
+    const res = await fetch(
+      `${API_URL}/admin/duplicate/${kecamatanId}?radius=${radius}`,
+      {
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      }
+    );
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Gagal mengambil data duplikat');
+
+    return {
+      success: true,
+      data: json.data || [],
+      total_groups: json.total_groups || 0,
+      total_pairs: json.total_pairs || 0,
+      radius: json.radius
+    };
+  } catch (error) {
+    console.error('Error getting duplicate groups:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+/**
+ * Merge laporan duplikat - gabungkan ke laporan primer
+ * @param {string} primaryId - UUID laporan yang dijadikan laporan utama
+ * @param {string[]} secondaryIds - Array UUID laporan yang digabungkan
+ * @returns {Promise<{success: boolean, merged_count?: number}>}
+ */
+export async function mergeLaporan(primaryId, secondaryIds) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Anda belum login.');
+
+    const res = await fetch(`${API_URL}/admin/duplicate/merge`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        primary_id: primaryId,
+        secondary_ids: secondaryIds
+      })
+    });
+
+    const json = await res.json();
+    if (!res.ok || json.success === false) {
+      throw new Error(json.error || 'Gagal menggabungkan laporan');
+    }
+
+    return {
+      success: true,
+      merged_count: json.merged_count,
+      total_upvotes: json.total_upvotes
+    };
+  } catch (error) {
+    console.error('Error merging laporan:', error);
     return { success: false, error: error.message };
   }
 }

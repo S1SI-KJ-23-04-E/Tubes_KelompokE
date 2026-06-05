@@ -61,10 +61,16 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
-    const { success } = await login(email, password);
+    const result = await login(email, password);
     setLoading(false);
-    if (success) navigate(from, { replace: true });
-    else setErrorMsg('Email atau password yang kamu masukkan salah.');
+    if (result.success) {
+      const role = result.profile?.role;
+      if (role === 'kecamatan')   navigate('/laporan?tab=__dashboard_kecamatan__', { replace: true });
+      else if (role === 'super_admin') navigate('/dashboard', { replace: true });
+      else navigate(from, { replace: true });
+    } else {
+      setErrorMsg('Email atau password yang kamu masukkan salah.');
+    }
   };
 
   return (

@@ -5,12 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import UploadBuktiModal from '../components/UploadBuktiModal';
 import KendalaForm from '../components/KendalaForm';
+import { createNotifikasi } from '../services/notifikasiService';
 import {
   ArrowLeft, Clock, MapPin, CheckCircle2, User,
   ThumbsUp, AlertTriangle, FileText, Camera, Star,
   ShieldCheck, ArrowUpCircle, XCircle, Share2, Info,
-  Wrench, Flag, Ban, AlertCircle, ChevronRight, Inbox
+  Wrench, Flag, Ban, AlertCircle, ChevronRight, Inbox,
+  MessageSquare
 } from 'lucide-react';
+import { StatusUpdateModal, AlertModal } from '../components/Modals';
 import { supabase } from '../lib/supabase';
 
 /* ─────────────── CONFIGS ─────────────── */
@@ -153,13 +156,24 @@ export default function LaporanDetail() {
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
   const isDone = data?.status === 'done';
 
+  const [statusModal, setStatusModal] = useState({ open: false, nextStatus: '', statusLabel: '' });
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'error' });
+
   useEffect(() => { loadData(); }, [id]);
 
   const loadData = async () => {
     setLoading(true);
     const result = await getLaporanById(id);
     if (result.success) setData(result.data);
-    else { alert('Laporan tidak ditemukan'); navigate('/laporan'); }
+    else { 
+      setAlertModal({ 
+        open: true, 
+        title: 'Error', 
+        message: 'Laporan tidak ditemukan', 
+        type: 'error' 
+      });
+      setTimeout(() => navigate('/laporan'), 2000);
+    }
     setLoading(false);
   };
 
@@ -174,12 +188,19 @@ export default function LaporanDetail() {
     setUpvoteLoading(false);
   };
 
-  const handleUpdateStatus = async (status) => {
-    const ket = window.prompt(`Update status ke "${status}"?\nCatatan (opsional):`);
-    if (ket === null) return;
+  const handleUpdateStatus = (status) => {
+    setStatusModal({ open: true, nextStatus: status, statusLabel: status });
+  };
+
+  const submitStatusUpdate = async (keterangan) => {
     setActionLoading(true);
-    const { success } = await updateLaporanStatus(id, status, null, ket);
-    if (success) loadData();
+    const { success, error } = await updateLaporanStatus(id, statusModal.nextStatus, null, keterangan);
+    if (success) {
+      loadData();
+      setStatusModal({ open: false, nextStatus: '', statusLabel: '' });
+    } else {
+      setAlertModal({ open: true, title: 'Gagal', message: error || 'Gagal update status', type: 'error' });
+    }
     setActionLoading(false);
   };
 
@@ -212,6 +233,29 @@ export default function LaporanDetail() {
     if (success) { setKendalaModalOpen(false); loadData(); }
     else alert('Gagal mengirim kendala: ' + (error || 'Error tidak diketahui'));
   };
+ const handleKirimReminder = async () => {
+  const pesanReminder = prompt(
+    'Tulis pesan reminder untuk petugas:',
+    `Laporan "${data.deskripsi}" diminta untuk segera ditindaklanjuti.`
+  );
+
+  if (!pesanReminder) return;
+
+  try {
+    await createNotifikasi({
+      laporan_id: data.id,
+      pengirim_id: user.id,
+      penerima_role: 'petugas',
+      judul: 'Peringatan',
+      pesan: pesanReminder
+    });
+
+    alert('Notifikasi berhasil dikirim');
+  } catch (err) {
+    console.error(err);
+    alert('Gagal mengirim notifikasi');
+  }
+};
 
   /* ── LOADING ── */
   if (loading) return (
@@ -383,11 +427,24 @@ export default function LaporanDetail() {
             <SectionHeader icon={FileText} title="Deskripsi Kerusakan" subtitle="Kesaksian pelapor" accent="indigo" />
             <blockquote className="relative">
               <span className="absolute -top-2 -left-1 text-6xl font-black text-indigo-100 leading-none select-none">"</span>
-              <p className="text-base text-slate-700 leading-loose font-medium pl-6 pt-4 italic">
+              <p className="text-base text-slate-700 leading-loose font-medium pl-6 pt-4 italic whitespace-pre-wrap">
                 {data.deskripsi}
               </p>
               <span className="text-indigo-100 text-6xl font-black leading-none float-right -mt-4 select-none">"</span>
             </blockquote>
+
+            {data.catatan && (
+              <div className="mt-8 bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare size={16} className="text-indigo-600" />
+                  <span className="text-[10px] font-black text-indigo-800 uppercase tracking-widest">Catatan Admin</span>
+                </div>
+                <p className="text-sm text-indigo-900 leading-relaxed font-medium">
+                  {data.catatan}
+                </p>
+              </div>
+            )}
 
             {/* inline detail pills */}
             <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-slate-50">
@@ -496,6 +553,15 @@ export default function LaporanDetail() {
                             <ArrowUpCircle size={14} /> Upload Bukti Selesai
                           </button>
                         )}
+
+                        {canModerate && (
+                          <button
+                           onClick={handleKirimReminder}
+                          className="flex-1 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl text-[10px] font-black transition-all"
+  >
+                          Kirim Reminder
+                        </button>
+                        )}
                         {profile?.role === 'petugas' && (
                           <button onClick={() => setKendalaModalOpen(true)}
                             className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-amber-600 border border-white/10 hover:border-amber-600 text-white py-3 rounded-xl text-[10px] font-black transition-all">
@@ -511,11 +577,22 @@ export default function LaporanDetail() {
                       </button>
                     )}
                     {canModerate && data.status === 'in_progress' && !data.bukti && (
-                      <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
-                        <XCircle size={14} className="text-slate-600 shrink-0" />
-                        <p className="text-[10px] text-slate-600 leading-snug">Menunggu petugas mengunggah bukti selesai.</p>
-                      </div>
-                    )}
+  <div className="space-y-2">
+    <button
+      onClick={handleKirimReminder}
+      className="w-full bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+    >
+      Kirim Reminder ke Petugas
+    </button>
+
+    <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
+      <XCircle size={14} className="text-slate-600 shrink-0" />
+      <p className="text-[10px] text-slate-600 leading-snug">
+        Menunggu petugas mengunggah bukti selesai.
+      </p>
+    </div>
+  </div>
+)}
                     {canModerate && !['pending', 'in_progress'].includes(data.status) && (
                       <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
                         <XCircle size={14} className="text-slate-600 shrink-0" />
@@ -523,7 +600,7 @@ export default function LaporanDetail() {
                       </div>
                     )}
                   </div>
-                </div>
+        </div>
               </div>
             </div>
           </div>
@@ -747,6 +824,26 @@ export default function LaporanDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Custom Status & Alert Modals */}
+      {statusModal.open && (
+        <StatusUpdateModal 
+          isOpen={statusModal.open}
+          statusLabel={statusModal.statusLabel}
+          onClose={() => setStatusModal({ ...statusModal, open: false })}
+          onSubmit={submitStatusUpdate}
+        />
+      )}
+
+      {alertModal.open && (
+        <AlertModal 
+          isOpen={alertModal.open}
+          title={alertModal.title}
+          message={alertModal.message}
+          type={alertModal.type}
+          onClose={() => setAlertModal({ ...alertModal, open: false })}
+        />
       )}
     </div>
   );

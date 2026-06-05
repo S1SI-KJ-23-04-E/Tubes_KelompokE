@@ -132,6 +132,23 @@ router.put('/laporan/:id/prioritas', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
+// PUT /api/admin/laporan/:id/catatan
+router.put('/laporan/:id/catatan', authenticate, async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin yang boleh menambahkan catatan.' });
+  }
+
+  const { catatan } = req.body;
+  const { error } = await supabaseAdmin
+    .from('laporan')
+    .update({ catatan })
+    .eq('id', req.params.id);
+
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, catatan });
+});
+
+
 // PUT /api/admin/laporan/:id/status
 router.put('/laporan/:id/status', authenticate, async (req, res) => {
   if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
