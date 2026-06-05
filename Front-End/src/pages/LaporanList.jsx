@@ -21,6 +21,7 @@ import {
   List,
   Clock,
   ChevronRight,
+  ChevronLeft,
   FileText,
   Trash2,
   Inbox,
@@ -38,7 +39,9 @@ import {
   Copy,
   GitMerge,
   MapPin,
-  BarChart3
+  BarChart3,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
@@ -57,6 +60,139 @@ const PRIORITY_CONFIG = {
   low:  { label: 'Rendah', color: 'text-blue-500 bg-blue-50 border-blue-200' },
 };
 
+const ROW_OPTIONS = [9, 12, 16];
+
+/* ═══════════════════════════════════════════════════════
+   PAGINATION COMPONENT
+═══════════════════════════════════════════════════════ */
+function Pagination({ currentPage, totalPages, totalItems, rowsPerPage, onPageChange, onRowsChange }) {
+  const start = totalItems === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+  const end   = Math.min(currentPage * rowsPerPage, totalItems);
+
+  /* Smart page number array with ellipsis */
+  const getPages = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (currentPage > 3) pages.push('ellipsis-start');
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      pages.push(i);
+    }
+    if (currentPage < totalPages - 2) pages.push('ellipsis-end');
+    pages.push(totalPages);
+    return pages;
+  };
+
+  if (totalItems === 0) return null;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white rounded-2xl border border-slate-100 px-5 py-4 shadow-sm">
+
+      {/* ── Rows per page ── */}
+      <div className="flex items-center gap-3">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+          Baris / halaman:
+        </span>
+        <div className="flex gap-1">
+          {ROW_OPTIONS.map((n) => (
+            <button
+              key={n}
+              onClick={() => { onRowsChange(n); onPageChange(1); }}
+              className={`w-9 h-8 rounded-lg text-xs font-black transition-all duration-150 ${
+                rowsPerPage === n
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105'
+                  : 'bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Item count ── */}
+      <span className="text-xs font-medium text-slate-400 order-last sm:order-none">
+        Menampilkan{' '}
+        <span className="font-black text-slate-700">{start}–{end}</span>
+        {' '}dari{' '}
+        <span className="font-black text-slate-700">{totalItems}</span>{' '}laporan
+      </span>
+
+      {/* ── Prev / Page numbers / Next ── */}
+      <div className="flex items-center gap-1.5">
+        {/* First page */}
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage <= 1}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Halaman pertama"
+        >
+          <ChevronsLeft size={14} />
+        </button>
+
+        {/* Previous */}
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="flex items-center gap-1 px-3 h-8 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          <ChevronLeft size={13} />
+          Prev
+        </button>
+
+        {/* Page numbers */}
+        <div className="flex gap-1">
+          {getPages().map((page, idx) =>
+            typeof page === 'string' ? (
+              <span
+                key={page}
+                className="w-8 h-8 flex items-center justify-center text-xs text-slate-400 select-none"
+              >
+                …
+              </span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`w-8 h-8 rounded-lg text-xs font-black transition-all duration-150 ${
+                  currentPage === page
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105'
+                    : 'bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'
+                }`}
+              >
+                {page}
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Next */}
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="flex items-center gap-1 px-3 h-8 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          Next
+          <ChevronRight size={13} />
+        </button>
+
+        {/* Last page */}
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage >= totalPages}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Halaman terakhir"
+        >
+          <ChevronsRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN: LaporanList
+═══════════════════════════════════════════════════════ */
 export default function LaporanList() {
   const [laporanPublik, setLaporanPublik] = useState([]); 
   const [laporanSaya, setLaporanSaya] = useState([]);   
@@ -125,7 +261,6 @@ export default function LaporanList() {
     try {
       const kecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
       if (isAdmin) {
-        console.log('Admin loading - role:', profile?.role, 'kecamatanId:', kecamatanId, 'activeTab:', activeTab);
         const { data: { session } } = await supabase.auth.getSession();
         
         let endpoint;
@@ -143,7 +278,6 @@ export default function LaporanList() {
           if (!res.ok) throw new Error(`Admin API gagal (${res.status})`);
 
           const json = await res.json();
-          console.log('Admin laporan response:', json);
           if (!json?.success) throw new Error(json?.error || 'Admin API tidak mengembalikan success=true');
 
           setLaporanMasuk(json.data || []);
@@ -156,7 +290,6 @@ export default function LaporanList() {
             }
           }
         } catch (apiErr) {
-          console.warn('Admin API failed, fallback to client query:', apiErr?.message || apiErr);
           const fallbackRes = await getAllLaporan();
           if (fallbackRes.success) {
             const fallbackData = fallbackRes.data || [];
@@ -177,21 +310,11 @@ export default function LaporanList() {
           }
         }
       } else {
-        // Load laporan publik (exclude current user) and laporan saya
         const feedRes = await getAllLaporan(user?.id);
-        console.debug('DEBUG feedRes count:', (feedRes.data || []).length, 'success:', feedRes.success);
-
-        if (feedRes.success && Array.isArray(feedRes.data)) {
-          console.debug('DEBUG sample pelapor_ids:', feedRes.data.slice(0,8).map(i => ({ id: i.id, pelapor_id: i.pelapor_id, profiles_id: i.profiles?.id, t: typeof i.pelapor_id })));
-        }
-
-        // Only show reports from OTHER warga in publik
         setLaporanPublik(feedRes.data || []);
 
-        // Still load user's history separately
         if (user) {
           const myRes = await getLaporanByUser();
-          console.debug('DEBUG myRes count:', (myRes.data || []).length, 'success:', myRes.success);
           if (myRes.success) setLaporanSaya(myRes.data || []);
         }
       }
@@ -279,44 +402,21 @@ export default function LaporanList() {
   ];
   const adminTabsList = [];
   if (profile?.role === "super_admin") {
-    adminTabsList.push({
-      id: "dashboard",
-      label: "Dashboard Analytics",
-      icon: BarChart3,
-    });
+    adminTabsList.push({ id: "dashboard", label: "Dashboard Analytics", icon: BarChart3 });
   }
-
   if (profile?.role === "kecamatan") {
-    adminTabsList.push({
-      id: "__dashboard_kecamatan__",
-      label: "Dashboard Penugasan",
-      icon: BarChart3,
-    });
+    adminTabsList.push({ id: "__dashboard_kecamatan__", label: "Dashboard Penugasan", icon: BarChart3 });
   }
-
   adminTabsList.push(
-    {
-      id: "masuk",
-      label: "Laporan Masuk",
-      icon: Inbox,
-    },
-    {
-      id: "progress",
-      label: "Laporan Progress",
-      icon: Activity,
-    },
-    {
-      id: "selesai",
-      label: "Laporan Selesai",
-      icon: CheckCircle2,
-    }
+    { id: "masuk",    label: "Laporan Masuk",    icon: Inbox       },
+    { id: "progress", label: "Laporan Progress",  icon: Activity    },
+    { id: "selesai",  label: "Laporan Selesai",   icon: CheckCircle2 }
   );
   if (canModerate) {
-    adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle });
-    adminTabsList.push({ id: 'duplikat', label: 'Deteksi Duplikat', icon: Copy });
+    adminTabsList.push({ id: 'kendala',  label: 'Kendala Lapangan',     icon: AlertTriangle });
+    adminTabsList.push({ id: 'duplikat', label: 'Deteksi Duplikat',     icon: Copy          });
   }
 
-  // Load duplicate groups when tab is active
   useEffect(() => {
     if (activeTab !== 'duplikat' || !canModerate) return;
     const kecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
@@ -350,49 +450,25 @@ export default function LaporanList() {
   const tabs = isAdmin ? adminTabsList : wargaTabs;
 
   const getPageTitle = () => {
-    if (
-      profile?.role === "super_admin" &&
-      activeTab === "dashboard"
-    ) {
-      return "Dashboard Super Admin";
-    }
-
+    if (profile?.role === "super_admin" && activeTab === "dashboard") return "Dashboard Super Admin";
     if (isAdmin) {
-       if (activeTab === '__dashboard_kecamatan__') return 'Dashboard Penugasan';
-       if (resolvedAdminTab === 'masuk') return 'Laporan Masuk';
-       if (resolvedAdminTab === 'progress') return 'Laporan Progress';
-       if (resolvedAdminTab === 'selesai') return 'Laporan Selesai';
-       if (resolvedAdminTab === 'kendala') return 'Kendala Lapangan';
-       if (resolvedAdminTab === 'duplikat') return 'Deteksi Laporan Duplikat';
+      if (activeTab === '__dashboard_kecamatan__') return 'Dashboard Penugasan';
+      if (resolvedAdminTab === 'masuk')    return 'Laporan Masuk';
+      if (resolvedAdminTab === 'progress') return 'Laporan Progress';
+      if (resolvedAdminTab === 'selesai')  return 'Laporan Selesai';
+      if (resolvedAdminTab === 'kendala')  return 'Kendala Lapangan';
+      if (resolvedAdminTab === 'duplikat') return 'Deteksi Laporan Duplikat';
     }
-    if (activeTab === 'buat') return 'Buat Laporan Baru';
+    if (activeTab === 'buat')    return 'Buat Laporan Baru';
     if (activeTab === 'history') return 'History Laporan Saya';
     return 'Laporan Publik';
   };
 
   const getPageSubtitle = () => {
-
-    if (
-      profile?.role === "super_admin" &&
-      activeTab === "dashboard"
-    ) {
-      return "Monitoring performa penyelesaian laporan seluruh kecamatan";
-    }
-
-    if (isAdmin) {
-      return `Kecamatan ${
-        profile?.kecamatan?.nama_kecamatan || ""
-      }`;
-    }
-
-    if (activeTab === "buat") {
-      return "Laporkan kerusakan infrastruktur di kota Anda";
-    }
-
-    if (activeTab === "history") {
-      return "Lihat riwayat laporan yang pernah Anda buat";
-    }
-
+    if (profile?.role === "super_admin" && activeTab === "dashboard") return "Monitoring performa penyelesaian laporan seluruh kecamatan";
+    if (isAdmin) return `Kecamatan ${profile?.kecamatan?.nama_kecamatan || ""}`;
+    if (activeTab === "buat")    return "Laporkan kerusakan infrastruktur di kota Anda";
+    if (activeTab === "history") return "Lihat riwayat laporan yang pernah Anda buat";
     return "Laporan dari warga lain di seluruh kota";
   };
 
@@ -439,24 +515,17 @@ export default function LaporanList() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           {activeTab !== "dashboard" && (
             <div className="flex-1 animate-fade-in-up">
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                {getPageTitle()}
-              </h1>
-
-              <p className="text-slate-500 text-sm mt-1 font-medium">
-                {getPageSubtitle()}
-              </p>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{getPageTitle()}</h1>
+              <p className="text-slate-500 text-sm mt-1 font-medium">{getPageSubtitle()}</p>
             </div>
-            )}
+          )}
 
           <div className="flex gap-3 w-full lg:w-auto">
-            {isAdmin && (
-              activeTab !== "dashboard" && 
+            {isAdmin && activeTab !== "dashboard" && (
               <div className="relative flex-1 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors" size={16} />
                 <input type="text" placeholder="Cari berdasarkan judul atau alamat..." className="pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs w-full lg:w-80 focus:ring-2 focus:ring-indigo-500/30 outline-none shadow-sm transition-all focus:shadow-md focus:border-indigo-400 input-focus-animate" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              
             )}
             {!isAdmin && activeTab === 'publik' && (
               <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
@@ -492,61 +561,41 @@ export default function LaporanList() {
         ) : loading ? (
           <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>
         ) : (
-
-        isAdmin ? (
-          activeTab === "dashboard" ? (
-            <SuperAdminDashboard />
-          ) : activeTab === "__dashboard_kecamatan__" ? (
-            <AdminKecamatanDashboard />
-          ) : activeTab === "kendala" ? (
-
-            <KendalaAdminView
-              kendala={kendalaList}
-              searchQuery={searchQuery}
-            />
-
-          ) : activeTab === "duplikat" ? (
-
-            <DuplikatAdminView
-              groups={duplicateGroups}
-              loading={duplicateLoading}
-              radius={duplicateRadius}
-              onRadiusChange={setDuplicateRadius}
-              onMerge={handleMerge}
-              searchQuery={searchQuery}
-            />
-
+          isAdmin ? (
+            activeTab === "dashboard" ? (
+              <SuperAdminDashboard />
+            ) : activeTab === "__dashboard_kecamatan__" ? (
+              <AdminKecamatanDashboard />
+            ) : activeTab === "kendala" ? (
+              <KendalaAdminView kendala={kendalaList} searchQuery={searchQuery} />
+            ) : activeTab === "duplikat" ? (
+              <DuplikatAdminView
+                groups={duplicateGroups}
+                loading={duplicateLoading}
+                radius={duplicateRadius}
+                onRadiusChange={setDuplicateRadius}
+                onMerge={handleMerge}
+                searchQuery={searchQuery}
+              />
+            ) : (
+              <AdminView
+                laporan={laporanMasuk || []}
+                activeTab={resolvedAdminTab}
+                onStatus={handleUpdateStatus}
+                onPriority={handleUpdatePriority}
+                onCatatan={openCatatanModal}
+                profile={profile}
+                searchQuery={searchQuery}
+              />
+            )
           ) : (
-
-            <AdminView
-              laporan={laporanMasuk || []}
-              activeTab={resolvedAdminTab}
-              onStatus={handleUpdateStatus}
-              onPriority={handleUpdatePriority}
-              onCatatan={openCatatanModal}
-              profile={profile}
-              searchQuery={searchQuery}
-            />
-
+            activeTab === "publik" ? (
+              <DaftarWargaView laporan={laporanPublik} searchQuery={publicSearchQuery} />
+            ) : (
+              <HistoryWargaView laporan={laporanSaya} onDelete={handleDelete} />
+            )
           )
-
-        ) : (
-
-          activeTab === "publik" ? (
-            <DaftarWargaView
-              laporan={laporanPublik}
-              searchQuery={publicSearchQuery}
-            />
-          ) : (
-            <HistoryWargaView
-              laporan={laporanSaya}
-              onDelete={handleDelete}
-            />
-          )
-
-        )
-      )}
-
+        )}
       </main>
 
       {/* Modals */}
@@ -559,7 +608,6 @@ export default function LaporanList() {
           onSubmit={submitCatatanModal}
         />
       )}
-
       {statusModal.open && (
         <StatusUpdateModal 
           isOpen={statusModal.open}
@@ -568,7 +616,6 @@ export default function LaporanList() {
           onSubmit={(ket) => submitStatusUpdate(statusModal.id, statusModal.nextStatus, ket)}
         />
       )}
-
       {deleteModal.open && (
         <DeleteConfirmModal 
           isOpen={deleteModal.open}
@@ -576,7 +623,6 @@ export default function LaporanList() {
           onConfirm={() => confirmDelete(deleteModal.id)}
         />
       )}
-
       {alertModal.open && (
         <AlertModal 
           isOpen={alertModal.open}
@@ -589,6 +635,8 @@ export default function LaporanList() {
     </div>
   );
 }
+
+/* ─── InlineLaporanRedirect (unchanged) ─── */
 function InlineLaporanRedirect() {
   const navigate = useNavigate();
   return (
@@ -613,35 +661,43 @@ function InlineLaporanRedirect() {
   );
 }
 
+/* ═══════════════════════════════════════════════════════
+   ADMIN VIEW — with pagination
+═══════════════════════════════════════════════════════ */
 function AdminView({ laporan, activeTab, onStatus, onPriority, onCatatan, profile, searchQuery }) {
+  const [currentPage, setCurrentPage]   = useState(1);
+  const [rowsPerPage, setRowsPerPage]   = useState(9);
+
+  /* Reset to page 1 whenever tab or search changes */
+  useEffect(() => { setCurrentPage(1); }, [activeTab, searchQuery]);
+
   const isPetugas = profile?.role === 'petugas';
 
-  // Filter by tab status
+  /* ── Filter by tab status ── */
   let filteredLaporan = laporan.filter(item => {
-    if (activeTab === 'masuk') {
-      return isPetugas ? item.status === 'verified' : item.status === 'pending';
-    }
-    if (activeTab === 'progress') {
-      return isPetugas ? item.status === 'in_progress' : ['verified', 'in_progress'].includes(item.status);
-    }
-    if (activeTab === 'selesai') {
-      return ['done', 'selesai', 'rejected'].includes(item.status);
-    }
+    if (activeTab === 'masuk')    return isPetugas ? item.status === 'verified'     : item.status === 'pending';
+    if (activeTab === 'progress') return isPetugas ? item.status === 'in_progress'  : ['verified', 'in_progress'].includes(item.status);
+    if (activeTab === 'selesai')  return ['done', 'selesai', 'rejected'].includes(item.status);
     return false;
   });
 
-  // Filter by search query (client-side, instant)
+  /* ── Filter by search query ── */
   if (searchQuery && searchQuery.trim() !== '') {
     const q = searchQuery.toLowerCase().trim();
-    filteredLaporan = filteredLaporan.filter(item => {
-      const judul = (item.judul || '').toLowerCase();
-      const alamat = (item.alamat || '').toLowerCase();
-      const deskripsi = (item.deskripsi || '').toLowerCase();
-      return judul.includes(q) || alamat.includes(q) || deskripsi.includes(q);
-    });
+    filteredLaporan = filteredLaporan.filter(item =>
+      (item.judul       || '').toLowerCase().includes(q) ||
+      (item.alamat      || '').toLowerCase().includes(q) ||
+      (item.deskripsi   || '').toLowerCase().includes(q)
+    );
   }
 
-  if (!filteredLaporan || filteredLaporan.length === 0) {
+  /* ── Pagination slice ── */
+  const totalItems  = filteredLaporan.length;
+  const totalPages  = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const safePage    = Math.min(currentPage, totalPages);
+  const paginated   = filteredLaporan.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+
+  if (totalItems === 0) {
     return (
       <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
         <Inbox size={40} className="mx-auto text-slate-300 mb-2 animate-float" />
@@ -649,60 +705,63 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, onCatatan, profil
       </div>
     );
   }
-  
+
   const showPriority = activeTab === 'masuk' || activeTab === 'progress';
 
   return (
-    <div className="space-y-5">
-      {filteredLaporan.map((item, idx) => {
-        const priorityVal = (item.prioritas || 'low').toLowerCase();
-        const finalPriority = (priorityVal === 'high') ? 'high' : 'low';
-        const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
-        const itemKecamatanId = item.kecamatan_id || item.kecamatan?.id;
-        const sameKecamatan = String(userKecamatanId || '') === String(itemKecamatanId || '');
-        const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
-        const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
-        const canChangePriority = showPriority && (profile?.role === 'kecamatan' && sameKecamatan);
-         
-        const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-        const isDone = item.status === "done" || item.status === "selesai";
-        const isRejected = item.status === "rejected";
-        const pCfg = PRIORITY_CONFIG[finalPriority];
+    <div>
+      <div className="space-y-5">
+        {paginated.map((item, idx) => {
+          const priorityVal   = (item.prioritas || 'low').toLowerCase();
+          const finalPriority = priorityVal === 'high' ? 'high' : 'low';
+          const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
+          const itemKecamatanId = item.kecamatan_id || item.kecamatan?.id;
+          const sameKecamatan   = String(userKecamatanId || '') === String(itemKecamatanId || '');
+          const canModerateItem = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
+          const canWorkAction   = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
+          const canChangePriority = showPriority && (profile?.role === 'kecamatan' && sameKecamatan);
 
-        const canAddCatatan = ['pending', 'verified', 'in_progress'].includes(item.status);
+          const cfg        = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+          const isDone     = item.status === "done" || item.status === "selesai";
+          const isRejected = item.status === "rejected";
+          const pCfg       = PRIORITY_CONFIG[finalPriority];
+          const canAddCatatan = ['pending', 'verified', 'in_progress'].includes(item.status);
 
-        return (
-          <div key={item.id} className={`bg-white rounded-2xl border ${finalPriority === 'high' ? 'border-red-200 shadow-red-50' : 'border-slate-200'} p-6 flex flex-col md:flex-row justify-between gap-6 shadow-sm hover:shadow-lg transition-all duration-300 relative animate-stagger card-hover`} style={{ animationDelay: `${idx * 50}ms` }}>
-            {finalPriority === 'high' && <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500 rounded-l-2xl transition-all" />}
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border ${pCfg.color} transition-all`}>{pCfg.label}</span>
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${cfg.badge} transition-all status-breathing`}>{cfg.label}</span>
-                
-                {canAddCatatan && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); onCatatan(item.id, item.catatan, isPetugas); }}
-                    className={`p-1 rounded-md transition-all ${item.catatan ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
-                    title="Catatan Tambahan"
-                  >
-                    <MessageSquare size={14} />
-                  </button>
-                )}
+          return (
+            <div
+              key={item.id}
+              className={`bg-white rounded-2xl border ${finalPriority === 'high' ? 'border-red-200 shadow-red-50' : 'border-slate-200'} p-6 flex flex-col md:flex-row justify-between gap-6 shadow-sm hover:shadow-lg transition-all duration-300 relative animate-stagger card-hover`}
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              {finalPriority === 'high' && <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500 rounded-l-2xl transition-all" />}
 
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider transition-colors">{new Date(item.created_at).toLocaleString('id-ID')}</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border ${pCfg.color} transition-all`}>{pCfg.label}</span>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${cfg.badge} transition-all status-breathing`}>{cfg.label}</span>
+                  {canAddCatatan && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); onCatatan(item.id, item.catatan, isPetugas); }}
+                      className={`p-1 rounded-md transition-all ${item.catatan ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                      title="Catatan Tambahan"
+                    >
+                      <MessageSquare size={14} />
+                    </button>
+                  )}
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider transition-colors">
+                    {new Date(item.created_at).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-xl mb-1 leading-tight transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h3>
+                <p className="text-sm text-slate-500 mb-5 flex items-center gap-1.5 transition-colors">📍 <span className="font-medium">{item.alamat}, {item.kelurahan?.nama_kelurahan}</span></p>
+                <div className="flex items-center gap-4 border-t border-slate-50 pt-4">
+                  <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">👤 {item.profiles?.nama || 'Warga'}</span>
+                  <Link to={`/laporan/${item.id}`} className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-all btn-hover-lift">DETAIL LENGKAP <ChevronRight size={14} /></Link>
+                </div>
               </div>
-              <h3 className="font-bold text-slate-900 text-xl mb-1 leading-tight transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h3>
-              <p className="text-sm text-slate-500 mb-5 flex items-center gap-1.5 transition-colors">📍 <span className="font-medium">{item.alamat}, {item.kelurahan?.nama_kelurahan}</span></p>
-              
-              <div className="flex items-center gap-4 border-t border-slate-50 pt-4">
-                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">👤 {item.profiles?.nama || 'Warga'}</span>
-                <Link to={`/laporan/${item.id}`} className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-all btn-hover-lift">DETAIL LENGKAP <ChevronRight size={14} /></Link>
-              </div>
-            </div>
-            
-            <div className="md:w-72 space-y-5 border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-8 flex flex-col justify-center">
-               <div>
+
+              <div className="md:w-72 space-y-5 border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-8 flex flex-col justify-center">
+                <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1 transition-colors"><ArrowUpCircle size={12}/> Set Prioritas</p>
                   <select 
                     value={finalPriority} 
@@ -716,103 +775,88 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, onCatatan, profil
                   {!canChangePriority && (
                     <p className="mt-2 text-[11px] text-slate-400">Hanya petugas atau kecamatan yang dapat mengubah prioritas.</p>
                   )}
-               </div>
-               <div className="flex flex-col gap-2">
+                </div>
+                <div className="flex flex-col gap-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                     <Clock size={12}/> Update Status
                   </p>
-
                   <div className="flex flex-col gap-2">
-                    {/* VERIFIKASI */}
-                    {canModerate && item.status === 'pending' && (
-                      <button 
-                        onClick={() => onStatus(item.id, 'verified')}
-                        className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 py-2.5 rounded-xl text-xs font-bold transition-all"
-                      >
-                        Verifikasi Laporan
-                      </button>
+                    {canModerateItem && item.status === 'pending' && (
+                      <button onClick={() => onStatus(item.id, 'verified')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-blue-500 hover:text-blue-600 py-2.5 rounded-xl text-xs font-bold transition-all">Verifikasi Laporan</button>
                     )}
-
-                    {/* PROGRESS */}
                     {canWorkAction && (
                       <>
                         {item.status === 'verified' && (
-                          <button 
-                            onClick={() => onStatus(item.id, 'in_progress')}
-                            className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold transition-all"
-                          >
-                            Mulai Perbaikan
-                          </button>
+                          <button onClick={() => onStatus(item.id, 'in_progress')} className="border-2 border-slate-200 text-slate-400 bg-white hover:border-purple-500 hover:text-purple-600 py-2.5 rounded-xl text-xs font-bold transition-all">Mulai Perbaikan</button>
                         )}
-
                         {item.status === 'pending' && (
-                          <p className="text-xs text-gray-400 italic">
-                            Menunggu verifikasi admin
-                          </p>
+                          <p className="text-xs text-gray-400 italic">Menunggu verifikasi admin</p>
                         )}
                       </>
                     )}
-
-                    {/* SELESAI */}
                     {canWorkAction && item.status === 'in_progress' && !(item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
-                      <Link 
-                        to={`/laporan/${item.id}`}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-black text-center transition-all shadow-md shadow-emerald-100"
-                      >
-                        Upload Bukti Selesai
-                      </Link>
+                      <Link to={`/laporan/${item.id}`} className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-black text-center transition-all shadow-md shadow-emerald-100">Upload Bukti Selesai</Link>
                     )}
-
-                    {/* VERIFIKASI SELESAI OLEH ADMIN KECAMATAN */}
-                    {canModerate && item.status === 'in_progress' && (item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
-                      <button 
-                        onClick={() => onStatus(item.id, 'done')}
-                        className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black text-center transition-all shadow-md shadow-green-100"
-                      >
-                        Selesai
-                      </button>
+                    {canModerateItem && item.status === 'in_progress' && (item.bukti_selesai && item.bukti_selesai.length > 0) && !isRejected && (
+                      <button onClick={() => onStatus(item.id, 'done')} className="bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-xs font-black text-center transition-all shadow-md shadow-green-100">Selesai</button>
                     )}
-
-                    {/* TOLAK */}
-                    {canModerate && item.status === 'pending' && !isDone && !isRejected && (
-                      <button 
-                        onClick={() => onStatus(item.id, 'rejected')}
-                        className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all"
-                      >
-                        Tolak Laporan
-                      </button>
+                    {canModerateItem && item.status === 'pending' && !isDone && !isRejected && (
+                      <button onClick={() => onStatus(item.id, 'rejected')} className="text-red-500 hover:bg-red-50 text-[11px] font-bold py-2 rounded-xl transition-all">Tolak Laporan</button>
                     )}
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* ── Pagination bar ── */}
+      <Pagination
+        currentPage={safePage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        rowsPerPage={rowsPerPage}
+        onPageChange={setCurrentPage}
+        onRowsChange={setRowsPerPage}
+      />
     </div>
   );
 }
 
+/* ═══════════════════════════════════════════════════════
+   DAFTAR WARGA VIEW — with pagination
+═══════════════════════════════════════════════════════ */
 function DaftarWargaView({ laporan, searchQuery = '', filterStatus = 'all' }) {
-  const q = searchQuery.toLowerCase().trim();
-  const filtered = laporan.filter((item) => {
-    // 1. Status Filter
-    let statusMatch = true;
-    if (filterStatus === 'pending') statusMatch = item.status === 'pending';
-    if (filterStatus === 'verified') statusMatch = ['verified', 'in_progress'].includes(item.status);
-    if (filterStatus === 'done') statusMatch = ['done', 'selesai', 'rejected'].includes(item.status);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(9);
 
-    // 2. Search Query Filter
+  /* Reset to page 1 when search or filter changes */
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterStatus]);
+
+  const q = searchQuery.toLowerCase().trim();
+
+  const filtered = laporan.filter((item) => {
+    let statusMatch = true;
+    if (filterStatus === 'pending')  statusMatch = item.status === 'pending';
+    if (filterStatus === 'verified') statusMatch = ['verified', 'in_progress'].includes(item.status);
+    if (filterStatus === 'done')     statusMatch = ['done', 'selesai', 'rejected'].includes(item.status);
+
     let searchMatch = true;
     if (q) {
-      const judul = (item.judul || '').toLowerCase();
+      const judul  = (item.judul  || '').toLowerCase();
       const alamat = (item.alamat || '').toLowerCase();
-      searchMatch = judul.includes(q) || alamat.includes(q);
+      searchMatch  = judul.includes(q) || alamat.includes(q);
     }
-
     return statusMatch && searchMatch;
   });
 
-  if (!filtered || filtered.length === 0) {
+  const totalItems  = filtered.length;
+  const totalPages  = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const safePage    = Math.min(currentPage, totalPages);
+  const paginated   = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+
+  if (totalItems === 0) {
     return (
       <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
         <Globe size={40} className="mx-auto text-slate-300 mb-2 animate-float" />
@@ -822,17 +866,35 @@ function DaftarWargaView({ laporan, searchQuery = '', filterStatus = 'all' }) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {filtered.map((item, idx) => (
-        <div key={item.id} style={{ animationDelay: `${idx * 50}ms` }}>
-          <LaporanCard laporan={item} minimal={true} />
-        </div>
-      ))}
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {paginated.map((item, idx) => (
+          <div key={item.id} style={{ animationDelay: `${idx * 50}ms` }}>
+            <LaporanCard laporan={item} minimal={true} />
+          </div>
+        ))}
+      </div>
+
+      {/* ── Pagination bar ── */}
+      <Pagination
+        currentPage={safePage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        rowsPerPage={rowsPerPage}
+        onPageChange={setCurrentPage}
+        onRowsChange={setRowsPerPage}
+      />
     </div>
   );
 }
 
+/* ═══════════════════════════════════════════════════════
+   HISTORY WARGA VIEW — with pagination
+═══════════════════════════════════════════════════════ */
 function HistoryWargaView({ laporan, onDelete }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(9);
+
   if (!laporan || laporan.length === 0) {
     return (
       <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
@@ -842,24 +904,61 @@ function HistoryWargaView({ laporan, onDelete }) {
     );
   }
 
+  const totalItems  = laporan.length;
+  const totalPages  = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const safePage    = Math.min(currentPage, totalPages);
+  const paginated   = laporan.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
+
   return (
-    <div className="space-y-4">
-      {laporan.map((item, idx) => (
-        <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 animate-stagger card-hover" style={{ animationDelay: `${idx * 50}ms` }}>
-          <div className="flex-1"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${STATUS_CONFIG[item.status]?.badge}`}>{STATUS_CONFIG[item.status]?.label}</span><h4 className="font-bold text-slate-800 text-lg mt-2 transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h4><p className="text-[12px] text-slate-500 mt-1 transition-colors">📍 {item.alamat}</p></div>
-          <div className="flex gap-2">{item.status === 'pending' && <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"><Trash2 size={20} /></button>}<Link to={`/laporan/${item.id}`} className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-xl transition-all duration-200 btn-hover-lift"><ChevronRight size={24} /></Link></div>
-        </div>
-      ))}
+    <div>
+      <div className="space-y-4">
+        {paginated.map((item, idx) => (
+          <div
+            key={item.id}
+            className="bg-white p-6 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 animate-stagger card-hover"
+            style={{ animationDelay: `${idx * 50}ms` }}
+          >
+            <div className="flex-1">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${STATUS_CONFIG[item.status]?.badge}`}>
+                {STATUS_CONFIG[item.status]?.label}
+              </span>
+              <h4 className="font-bold text-slate-800 text-lg mt-2 transition-colors hover:text-indigo-600">{item.judul || item.deskripsi}</h4>
+              <p className="text-[12px] text-slate-500 mt-1 transition-colors">📍 {item.alamat}</p>
+            </div>
+            <div className="flex gap-2">
+              {item.status === 'pending' && (
+                <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95">
+                  <Trash2 size={20} />
+                </button>
+              )}
+              <Link to={`/laporan/${item.id}`} className="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-xl transition-all duration-200 btn-hover-lift">
+                <ChevronRight size={24} />
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Pagination bar ── */}
+      <Pagination
+        currentPage={safePage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        rowsPerPage={rowsPerPage}
+        onPageChange={setCurrentPage}
+        onRowsChange={setRowsPerPage}
+      />
     </div>
   );
 }
 
+/* ─── KendalaAdminView (unchanged) ─── */
 function KendalaAdminView({ kendala, searchQuery }) {
   let filteredKendala = kendala;
   if (searchQuery && searchQuery.trim() !== '') {
     const q = searchQuery.toLowerCase().trim();
     filteredKendala = filteredKendala.filter(item => {
-      const judul = (item.laporan?.judul || '').toLowerCase();
+      const judul  = (item.laporan?.judul  || '').toLowerCase();
       const alamat = (item.laporan?.alamat || '').toLowerCase();
       return judul.includes(q) || alamat.includes(q);
     });
@@ -878,30 +977,23 @@ function KendalaAdminView({ kendala, searchQuery }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {filteredKendala.map((item, idx) => (
         <div key={item.id} className="bg-white rounded-2xl border border-red-100 shadow-sm hover:shadow-xl hover:border-red-300 transition-all duration-300 relative animate-stagger flex flex-col overflow-hidden group" style={{ animationDelay: `${idx * 50}ms` }}>
-          
-          {/* Top colored accent line */}
           <div className="h-1.5 w-full bg-gradient-to-r from-red-500 to-rose-400" />
-          
           <div className="p-6 flex flex-col flex-1">
             <div className="flex justify-between items-start mb-5">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
                   <AlertTriangle size={15} className="text-red-500" />
                 </div>
-                <span className="text-[10px] font-black tracking-widest uppercase text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100">
-                  Kendala Lapangan
-                </span>
+                <span className="text-[10px] font-black tracking-widest uppercase text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100">Kendala Lapangan</span>
               </div>
               <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1.5">
                 <Clock size={12}/>
                 {new Date(item.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
-            
             <div className="mb-6">
               <h4 className="font-extrabold text-slate-800 text-lg leading-snug group-hover:text-red-600 transition-colors">{item.deskripsi || item.isi_kendala}</h4>
             </div>
-            
             {item.laporan && (
               <div className="mt-auto bg-slate-50/80 rounded-xl border border-slate-100 p-4 transition-all hover:bg-slate-50">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
@@ -909,7 +1001,6 @@ function KendalaAdminView({ kendala, searchQuery }) {
                   Informasi Laporan Terkait
                 </p>
                 <p className="text-sm font-bold text-slate-700 leading-snug mb-4 line-clamp-1">{item.laporan.judul || item.laporan.deskripsi}</p>
-                
                 <Link to={`/laporan/${item.laporan.id}`} className="flex items-center justify-between w-full bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-sm px-4 py-2.5 rounded-lg text-[11px] font-black tracking-wide text-indigo-600 hover:text-indigo-700 transition-all btn-hover-lift group/btn">
                   LIHAT DETAIL LAPORAN
                   <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
@@ -923,23 +1014,20 @@ function KendalaAdminView({ kendala, searchQuery }) {
   );
 }
 
-// ============================================
-// SMART DUPLICATE DETECTION VIEW
-// ============================================
+/* ─── DuplikatAdminView (unchanged) ─── */
 function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, searchQuery }) {
   const [mergeModal, setMergeModal] = useState({ open: false, group: null });
   const [selectedPrimary, setSelectedPrimary] = useState(null);
   const [merging, setMerging] = useState(false);
 
-  // Filter groups by search
   let filteredGroups = groups;
   if (searchQuery && searchQuery.trim()) {
     const q = searchQuery.toLowerCase().trim();
     filteredGroups = groups.filter(group =>
       group.reports.some(r =>
-        (r.judul || '').toLowerCase().includes(q) ||
-        (r.alamat || '').toLowerCase().includes(q) ||
-        (r.deskripsi || '').toLowerCase().includes(q)
+        (r.judul      || '').toLowerCase().includes(q) ||
+        (r.alamat     || '').toLowerCase().includes(q) ||
+        (r.deskripsi  || '').toLowerCase().includes(q)
       )
     );
   }
@@ -952,9 +1040,7 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
   const handleConfirmMerge = async () => {
     if (!selectedPrimary || !mergeModal.group) return;
     setMerging(true);
-    const secondaryIds = mergeModal.group.reports
-      .filter(r => r.id !== selectedPrimary)
-      .map(r => r.id);
+    const secondaryIds = mergeModal.group.reports.filter(r => r.id !== selectedPrimary).map(r => r.id);
     await onMerge(selectedPrimary, secondaryIds);
     setMerging(false);
     setMergeModal({ open: false, group: null });
@@ -972,7 +1058,6 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
 
   return (
     <div className="space-y-6">
-      {/* Radius Control */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm animate-fade-in">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
@@ -986,10 +1071,7 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
           </div>
           <div className="flex items-center gap-4 flex-1 sm:justify-end">
             <input
-              type="range"
-              min="1"
-              max="50"
-              value={radius}
+              type="range" min="1" max="50" value={radius}
               onChange={(e) => onRadiusChange(Number(e.target.value))}
               className="w-40 h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-orange-500"
             />
@@ -1000,29 +1082,21 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
         </div>
       </div>
 
-      {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
           <p className="text-3xl font-black text-orange-600">{filteredGroups.length}</p>
           <p className="text-xs font-bold text-slate-400 mt-1">Grup Duplikat</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
-          <p className="text-3xl font-black text-slate-700">
-            {filteredGroups.reduce((sum, g) => sum + g.count, 0)}
-          </p>
+          <p className="text-3xl font-black text-slate-700">{filteredGroups.reduce((sum, g) => sum + g.count, 0)}</p>
           <p className="text-xs font-bold text-slate-400 mt-1">Total Laporan Terdeteksi</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
-          <p className="text-3xl font-black text-emerald-600">
-            {filteredGroups.length > 0
-              ? `${filteredGroups[0].min_distance}m`
-              : '—'}
-          </p>
+          <p className="text-3xl font-black text-emerald-600">{filteredGroups.length > 0 ? `${filteredGroups[0].min_distance}m` : '—'}</p>
           <p className="text-xs font-bold text-slate-400 mt-1">Jarak Terdekat</p>
         </div>
       </div>
 
-      {/* Empty State */}
       {filteredGroups.length === 0 && (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 animate-fade-in shadow-sm">
           <Copy size={40} className="mx-auto text-slate-300 mb-3 animate-float" />
@@ -1031,109 +1105,59 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
         </div>
       )}
 
-      {/* Duplicate Groups */}
       {filteredGroups.map((group, gIdx) => (
-        <div
-          key={group.group_id}
-          className="bg-white rounded-2xl border border-orange-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden animate-stagger"
-          style={{ animationDelay: `${gIdx * 80}ms` }}
-        >
-          {/* Group Header */}
+        <div key={group.group_id} className="bg-white rounded-2xl border border-orange-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden animate-stagger" style={{ animationDelay: `${gIdx * 80}ms` }}>
           <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-md shadow-orange-200">
-                {group.count}
-              </div>
+              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-md shadow-orange-200">{group.count}</div>
               <div>
-                <p className="text-sm font-extrabold text-slate-800">
-                  Grup Duplikat #{gIdx + 1}
-                </p>
+                <p className="text-sm font-extrabold text-slate-800">Grup Duplikat #{gIdx + 1}</p>
                 <p className="text-[11px] text-slate-500">
                   Jarak: <span className="font-bold text-orange-600">{group.min_distance}m</span>
-                  {group.max_distance !== group.min_distance && (
-                    <span> — {group.max_distance}m</span>
-                  )}
+                  {group.max_distance !== group.min_distance && <span> — {group.max_distance}m</span>}
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => openMergeModal(group)}
-              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all shadow-md shadow-orange-200 btn-hover-lift active:scale-95"
-            >
-              <GitMerge size={14} />
-              Gabungkan
+            <button onClick={() => openMergeModal(group)} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all shadow-md shadow-orange-200 btn-hover-lift active:scale-95">
+              <GitMerge size={14} /> Gabungkan
             </button>
           </div>
 
-          {/* Reports in Group */}
           <div className="p-4 space-y-3">
             {group.reports.map((report, rIdx) => {
               const cfg = STATUS_CONFIG[report.status] || STATUS_CONFIG.pending;
               return (
-                <div
-                  key={report.id}
-                  className="flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-200"
-                >
-                  {/* Report Photo */}
+                <div key={report.id} className="flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-200">
                   {report.foto_url && (
                     <div className="w-full md:w-24 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                       <img src={report.foto_url} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
-
-                  {/* Report Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
-                        {cfg.label}
-                      </span>
-                      {rIdx === 0 && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                          LAPORAN PERTAMA
-                        </span>
-                      )}
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        {new Date(report.created_at).toLocaleString('id-ID', { 
-                          day: 'numeric', month: 'short', year: 'numeric',
-                          hour: '2-digit', minute: '2-digit' 
-                        })}
-                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>{cfg.label}</span>
+                      {rIdx === 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">LAPORAN PERTAMA</span>}
+                      <span className="text-[10px] text-slate-400 font-bold">{new Date(report.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">
-                      {report.judul || report.deskripsi}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
-                      📍 {report.alamat}
-                    </p>
+                    <h4 className="font-bold text-slate-800 text-sm leading-snug truncate">{report.judul || report.deskripsi}</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">📍 {report.alamat}</p>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                        👤 {report.pelapor_nama || 'Warga'}
-                      </span>
-                      <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded">
-                        👍 {report.upvote_count || 0} dukungan
-                      </span>
-                      <Link
-                        to={`/laporan/${report.id}`}
-                        className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 ml-auto"
-                      >
-                        DETAIL <ChevronRight size={12} />
-                      </Link>
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">👤 {report.pelapor_nama || 'Warga'}</span>
+                      <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded">👍 {report.upvote_count || 0} dukungan</span>
+                      <Link to={`/laporan/${report.id}`} className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 ml-auto">DETAIL <ChevronRight size={12} /></Link>
                     </div>
                   </div>
                 </div>
               );
             })}
 
-            {/* Distance Info */}
             {group.distances.length > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-slate-100">
                 <MapPin size={14} className="text-orange-500" />
                 <span className="text-[11px] text-slate-500 font-medium">
                   Jarak antar laporan:{' '}
                   {group.distances.map((d, i) => (
-                    <span key={i} className="font-bold text-orange-600">
-                      {d.meters}m{i < group.distances.length - 1 ? ', ' : ''}
-                    </span>
+                    <span key={i} className="font-bold text-orange-600">{d.meters}m{i < group.distances.length - 1 ? ', ' : ''}</span>
                   ))}
                 </span>
               </div>
@@ -1142,77 +1166,39 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
         </div>
       ))}
 
-      {/* Merge Modal */}
       {mergeModal.open && mergeModal.group && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
-          onClick={(e) => e.target === e.currentTarget && setMergeModal({ open: false, group: null })}
-        >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={(e) => e.target === e.currentTarget && setMergeModal({ open: false, group: null })}>
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden animate-slide-in-up max-h-[90vh] flex flex-col">
-            {/* Header */}
             <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100 px-8 py-5 flex items-center gap-3 shrink-0">
-              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200">
-                <GitMerge size={20} className="text-white" />
-              </div>
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-200"><GitMerge size={20} className="text-white" /></div>
               <div>
                 <h3 className="font-black text-slate-800">Gabungkan Laporan Duplikat</h3>
                 <p className="text-[11px] text-slate-500">Pilih laporan utama yang akan dipertahankan</p>
               </div>
             </div>
-
-            {/* Body */}
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <p className="text-sm text-slate-600 bg-amber-50 border border-amber-200 rounded-xl p-3">
                 ⚠️ <strong>Perhatian:</strong> Laporan yang digabungkan akan ditandai sebagai <em>selesai</em> dan upvote-nya dipindahkan ke laporan utama. Tindakan ini tidak dapat dibatalkan.
               </p>
-
               <div className="space-y-3">
-                {mergeModal.group.reports.map((report, idx) => {
+                {mergeModal.group.reports.map((report) => {
                   const isSelected = selectedPrimary === report.id;
                   return (
-                    <button
-                      key={report.id}
-                      type="button"
-                      onClick={() => setSelectedPrimary(report.id)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
-                        isSelected
-                          ? 'border-orange-500 bg-orange-50 shadow-md shadow-orange-100'
-                          : 'border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/30'
-                      }`}
-                    >
+                    <button key={report.id} type="button" onClick={() => setSelectedPrimary(report.id)} className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${isSelected ? 'border-orange-500 bg-orange-50 shadow-md shadow-orange-100' : 'border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/30'}`}>
                       <div className="flex items-start gap-3">
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                          isSelected ? 'border-orange-500 bg-orange-500' : 'border-slate-300'
-                        }`}>
-                          {isSelected && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-slate-300'}`}>
+                          {isSelected && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            {isSelected && (
-                              <span className="text-[10px] font-black text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
-                                UTAMA
-                              </span>
-                            )}
-                            {!isSelected && (
-                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                                AKAN DIGABUNGKAN
-                              </span>
-                            )}
+                            {isSelected ? <span className="text-[10px] font-black text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">UTAMA</span> : <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">AKAN DIGABUNGKAN</span>}
                           </div>
-                          <h4 className="font-bold text-slate-800 text-sm truncate">
-                            {report.judul || report.deskripsi}
-                          </h4>
+                          <h4 className="font-bold text-slate-800 text-sm truncate">{report.judul || report.deskripsi}</h4>
                           <p className="text-[11px] text-slate-500 mt-0.5">📍 {report.alamat}</p>
                           <div className="flex items-center gap-3 mt-1.5">
                             <span className="text-[10px] text-slate-400">👤 {report.pelapor_nama}</span>
                             <span className="text-[10px] text-slate-400">👍 {report.upvote_count || 0}</span>
-                            <span className="text-[10px] text-slate-400">
-                              {new Date(report.created_at).toLocaleDateString('id-ID')}
-                            </span>
+                            <span className="text-[10px] text-slate-400">{new Date(report.created_at).toLocaleDateString('id-ID')}</span>
                           </div>
                         </div>
                       </div>
@@ -1221,34 +1207,10 @@ function DuplikatAdminView({ groups, loading, radius, onRadiusChange, onMerge, s
                 })}
               </div>
             </div>
-
-            {/* Footer */}
             <div className="border-t border-slate-100 p-6 flex gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setMergeModal({ open: false, group: null })}
-                disabled={merging}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmMerge}
-                disabled={merging || !selectedPrimary}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {merging ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Menggabungkan...
-                  </>
-                ) : (
-                  <>
-                    <GitMerge size={14} />
-                    Gabungkan {mergeModal.group.reports.length - 1} Laporan
-                  </>
-                )}
+              <button type="button" onClick={() => setMergeModal({ open: false, group: null })} disabled={merging} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all">Batal</button>
+              <button type="button" onClick={handleConfirmMerge} disabled={merging || !selectedPrimary} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2 disabled:opacity-50">
+                {merging ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menggabungkan...</>) : (<><GitMerge size={14} /> Gabungkan {mergeModal.group.reports.length - 1} Laporan</>)}
               </button>
             </div>
           </div>
