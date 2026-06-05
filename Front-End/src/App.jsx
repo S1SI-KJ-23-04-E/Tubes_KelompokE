@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LaporanList from './pages/LaporanList';
 import LaporanForm from './pages/LaporanForm';
 import LaporanDetail from './pages/LaporanDetail';
+import AdminPage from './pages/AdminPage';
+import BeritaPage from './pages/BeritaPage';
 import ProfileUpdate from './pages/ProfileUpdate';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -96,6 +98,18 @@ function AppRoutes() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <ProfileUpdate />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/berita" element={
+            <ProtectedRoute>
+              <BeritaPage />
             </ProtectedRoute>
           } />
 

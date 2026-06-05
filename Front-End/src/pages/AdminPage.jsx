@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import ReportCard from "../components/ReportCard";
+import LaporanCard from "../components/LaporanCard";
 
 // ✅ TAMBAHAN
-import { getKendalaByKecamatan } from "../services/laporanService";
+import { getKendalaByKecamatan, getLaporanByKecamatan } from "../services/laporanService";
+import { createBerita } from "../services/beritaService";
 import { useAuth } from "../contexts/AuthContext";
 
 const AdminPage = () => {
@@ -13,20 +13,21 @@ const AdminPage = () => {
   const [kendalaList, setKendalaList] = useState([]);
 
   // ✅ TAMBAHAN
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const fetchLaporan = async () => {
-    try {
-      const res = await axios.get("http://localhost:3000/laporan");
+    if (!profile?.kecamatan_id) return;
+    const res = await getLaporanByKecamatan(profile.kecamatan_id);
+    if (res.success) {
       setLaporan(res.data);
-    } catch (err) {
-      console.error(err);
+    } else {
+      console.error('Gagal memuat laporan:', res.error);
     }
   };
 
   useEffect(() => {
     fetchLaporan();
-  }, []);
+  }, [user]);
 
   // ✅ TAMBAHAN (TIDAK MENGGANGGU YANG LAMA)
   useEffect(() => {
@@ -56,7 +57,7 @@ const AdminPage = () => {
 
       {/* ✅ BAGIAN LAMA (TIDAK DIUBAH) */}
       {laporan.map((item) => (
-        <ReportCard key={item.id_laporan} laporan={item} onUpdate={fetchLaporan} />
+        <LaporanCard key={item.id_laporan || item.id} laporan={item} onUpdate={fetchLaporan} />
       ))}
 
       {/* ✅ TAMBAHAN KENDALA */}
@@ -74,8 +75,56 @@ const AdminPage = () => {
           </div>
         ))
       )}
+
+      {/* Form buat berita untuk admin kecamatan */}
+      {profile?.role === 'kecamatan' || profile?.role === 'super_admin' ? (
+        <div className="mt-6 border-t pt-4">
+          <h2 className="text-lg font-semibold mb-2">Buat Berita Informasi</h2>
+          <BeritaForm />
+        </div>
+      ) : null}
     </div>
   );
 };
 
 export default AdminPage;
+
+function BeritaForm() {
+  const [judul, setJudul] = useState('');
+  const [deskripsi, setDeskripsi] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMsg(null);
+    const payload = { judul, deskripsi };
+    const res = await createBerita(payload);
+    setLoading(false);
+    if (res.success) {
+      setMsg({ type: 'success', text: 'Berita berhasil dibuat' });
+      setJudul('');
+      setDeskripsi('');
+    } else {
+      setMsg({ type: 'error', text: res.error || 'Gagal membuat berita' });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-xl">
+      <div className="mb-2">
+        <label className="block text-sm font-medium mb-1">Judul</label>
+        <input value={judul} onChange={(e) => setJudul(e.target.value)} className="w-full border p-2 rounded" />
+      </div>
+      <div className="mb-2">
+        <label className="block text-sm font-medium mb-1">Deskripsi</label>
+        <textarea value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} className="w-full border p-2 rounded h-28" />
+      </div>
+      <div className="flex items-center gap-2">
+        <button disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded">{loading ? 'Menyimpan...' : 'Simpan Berita'}</button>
+        {msg ? <p className={msg.type === 'success' ? 'text-green-600' : 'text-red-600'}>{msg.text}</p> : null}
+      </div>
+    </form>
+  );
+}

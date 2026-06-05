@@ -13,3 +13,21 @@ export const supabase = createClient(
     }
   }
 )
+
+// Helper to get a valid access token (refreshes if needed)
+export async function getValidToken() {
+  try {
+    const { data: { session } = {} } = await supabase.auth.getSession();
+    let token = session?.access_token;
+
+    if (!token && typeof supabase.auth.refreshSession === 'function') {
+      const refreshResult = await supabase.auth.refreshSession();
+      token = refreshResult.data?.session?.access_token;
+    }
+
+    return token;
+  } catch (err) {
+    console.warn('getValidToken error:', err?.message || err);
+    return null;
+  }
+}

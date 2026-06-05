@@ -1,23 +1,40 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 
 import wilayahRoutes from './routes/wilayah.js';
 import laporanRoutes from './routes/laporan.js';
 import adminRoutes from './routes/admin.js';
+import beritaRoutes from './routes/berita.js';
 import profileRoutes from './routes/profile.js';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
 
 // ✅ CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000'
+];
+
+const isLocalhostOrigin = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || isLocalhostOrigin(origin)) return callback(null, true);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
 // ✅ Middleware
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ✅ Debug log
 app.use((req, res, next) => {
@@ -29,6 +46,7 @@ app.use((req, res, next) => {
 app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/berita', beritaRoutes);
 app.use('/api/profile', profileRoutes);
 
 app.get('/api/health', (req, res) => {

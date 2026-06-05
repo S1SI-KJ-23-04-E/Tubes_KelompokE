@@ -114,6 +114,7 @@ CREATE TABLE berita (
   kecamatan_id UUID REFERENCES kecamatan(id),
   judul TEXT NOT NULL,
   deskripsi TEXT NOT NULL,
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

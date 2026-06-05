@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import { 
   getLaporanByUser, 
   getAllLaporan, 
@@ -8,6 +8,7 @@ import {
   updateLaporanStatus,
   getKendalaByKecamatan
 } from '../services/laporanService';
+import { getAllBerita } from '../services/beritaService';
 import { useAuth } from '../contexts/AuthContext';
 import LaporanCard from '../components/LaporanCard';
 import { Plus, List, Clock, ChevronRight, FileText, Trash2, Inbox, ShieldCheck, CheckCircle2, Search, ArrowUpCircle, PanelLeftClose, PanelLeftOpen, PenSquare, Globe, Activity, AlertTriangle } from 'lucide-react';
@@ -38,6 +39,9 @@ export default function LaporanList() {
   const [publicSearchQuery, setPublicSearchQuery] = useState('');
   const [publicFilterStatus, setPublicFilterStatus] = useState('all');
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [beritaList, setBeritaList] = useState([]);
+  const [beritaLoading, setBeritaLoading] = useState(true);
+  const [beritaError, setBeritaError] = useState(null);
   
   const [searchParams] = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
@@ -85,6 +89,22 @@ export default function LaporanList() {
     }
   }, [authLoading, user, profile, isAdmin, activeTab]);
 
+  useEffect(() => {
+    const fetchBerita = async () => {
+      setBeritaLoading(true);
+      const res = await getAllBerita();
+      if (res.success) {
+        setBeritaList(res.data || []);
+        setBeritaError(null);
+      } else {
+        setBeritaList([]);
+        setBeritaError(res.error || 'Gagal memuat berita.');
+      }
+      setBeritaLoading(false);
+    };
+    fetchBerita();
+  }, []);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -101,8 +121,11 @@ export default function LaporanList() {
         }
         
         try {
+          const token = await getValidToken();
+          if (!token) console.warn('No access token available for admin API; falling back to client query');
+
           const res = await fetch(endpoint, {
-            headers: { 'Authorization': `Bearer ${session?.access_token}` }
+            headers: { 'Authorization': `Bearer ${token || ''}` }
           });
 
           if (!res.ok) throw new Error(`Admin API gagal (${res.status})`);
@@ -167,6 +190,7 @@ export default function LaporanList() {
   const handleUpdatePriority = async (id, priority) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      console.debug('session for admin API:', !!session, session?.access_token ? 'token length=' + session.access_token.length : 'no token');
       const res = await fetch(`${API_URL}/admin/laporan/${id}/prioritas`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -197,6 +221,7 @@ export default function LaporanList() {
 
   if (authLoading) return <div className="p-20 text-center text-slate-400 font-bold">Memuat...</div>;
 
+  const beritaTab = { id: 'berita', label: 'Berita', icon: FileText, path: '/berita' };
   const wargaTabs = [
     { id: 'buat', label: 'Buat Laporan', icon: PenSquare },
     { id: 'history', label: 'History Saya', icon: Clock },
@@ -211,7 +236,7 @@ export default function LaporanList() {
     adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle });
   }
 
-  const tabs = isAdmin ? adminTabsList : wargaTabs;
+  const tabs = [beritaTab, ...(isAdmin ? adminTabsList : wargaTabs)];
 
   const getPageTitle = () => {
     if (isAdmin) {
@@ -253,7 +278,7 @@ export default function LaporanList() {
           {tabs.map((t, idx) => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id)}
+              onClick={() => (t.path ? navigate(t.path) : setActiveTab(t.id))}
               className={`flex items-center ${sidebarExpanded ? 'gap-3 px-4' : 'justify-center px-0'} w-full py-3 rounded-xl text-sm font-semibold transition-all duration-300 animate-fade-in-up ${
                 activeTab === t.id 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105' 
@@ -304,6 +329,8 @@ export default function LaporanList() {
             )}
           </div>
         </div>
+
+
 
         {activeTab === 'buat' && !isAdmin ? (
           <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>

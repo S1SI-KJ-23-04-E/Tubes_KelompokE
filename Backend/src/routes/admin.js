@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
+const upload = multer({ dest: 'uploads/berita' });
 
 // GET /api/admin/laporan/all — Semua laporan (super admin)
 router.get('/laporan/all', authenticate, async (req, res) => {
@@ -31,6 +33,38 @@ router.get('/laporan/all', authenticate, async (req, res) => {
   res.json({ success: true, data: sortedData });
 });
 
+// POST /api/admin/berita  — Buat berita informasi oleh admin kecamatan / super_admin
+router.post('/berita', authenticate, upload.single('image'), async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin kecamatan atau super admin yang dapat membuat berita.' });
+  }
+
+  const { judul, deskripsi, kecamatan_id } = req.body;
+  const imageUrl = req.file ? `/uploads/berita/${req.file.filename}` : null;
+  if (!judul || !deskripsi) return res.status(400).json({ success: false, error: 'Judul dan deskripsi wajib diisi.' });
+
+  // jika role kecamatan, pakai kecamatan_id dari profile
+  let targetKecamatan = kecamatan_id;
+  if (req.user?.profile?.role === 'kecamatan') {
+    targetKecamatan = req.user.profile.kecamatan_id;
+  }
+
+  try {
+    const { error } = await supabaseAdmin.from('berita').insert({
+      author_id: req.user.id,
+      kecamatan_id: targetKecamatan || null,
+      judul,
+      deskripsi,
+      image_url: imageUrl,
+      created_at: new Date().toISOString(),
+    });
+
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 // GET /api/admin/laporan/kecamatan/:kecamatanId
 router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => {
   const { search } = req.query;
