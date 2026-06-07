@@ -65,6 +65,97 @@ router.post('/berita', authenticate, upload.single('image'), async (req, res) =>
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// PUT /api/admin/berita/:id  — Edit berita informasi oleh admin kecamatan / super_admin
+router.put('/berita/:id', authenticate, upload.single('image'), async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin kecamatan atau super admin yang dapat mengubah berita.' });
+  }
+
+  const { id } = req.params;
+  const { judul, deskripsi, remove_image } = req.body;
+
+  if (!judul || !deskripsi) return res.status(400).json({ success: false, error: 'Judul dan deskripsi wajib diisi.' });
+
+  try {
+    // Ambil berita untuk cek kepemilikan kecamatan
+    const { data: news, error: fetchError } = await supabaseAdmin
+      .from('berita')
+      .select('kecamatan_id, image_url')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError) return res.status(500).json({ success: false, error: fetchError.message });
+    if (!news) return res.status(404).json({ success: false, error: 'Berita tidak ditemukan.' });
+
+    // Cek kepemilikan jika role kecamatan
+    if (req.user?.profile?.role === 'kecamatan') {
+      if (String(news.kecamatan_id) !== String(req.user.profile.kecamatan_id || '')) {
+        return res.status(403).json({ success: false, error: 'Anda hanya dapat mengubah berita di kecamatan Anda.' });
+      }
+    }
+
+    let imageUrl = news.image_url;
+    if (req.file) {
+      imageUrl = `/uploads/berita/${req.file.filename}`;
+    } else if (remove_image === 'true') {
+      imageUrl = null;
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('berita')
+      .update({
+        judul,
+        deskripsi,
+        image_url: imageUrl,
+      })
+      .eq('id', id);
+
+    if (updateError) return res.status(500).json({ success: false, error: updateError.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/admin/berita/:id  — Hapus berita informasi oleh admin kecamatan / super_admin
+router.delete('/berita/:id', authenticate, async (req, res) => {
+  if (!['kecamatan', 'super_admin'].includes(req.user?.profile?.role)) {
+    return res.status(403).json({ success: false, error: 'Hanya admin kecamatan atau super admin yang dapat menghapus berita.' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    // Ambil berita untuk cek kepemilikan kecamatan
+    const { data: news, error: fetchError } = await supabaseAdmin
+      .from('berita')
+      .select('kecamatan_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError) return res.status(500).json({ success: false, error: fetchError.message });
+    if (!news) return res.status(404).json({ success: false, error: 'Berita tidak ditemukan.' });
+
+    // Cek kepemilikan jika role kecamatan
+    if (req.user?.profile?.role === 'kecamatan') {
+      if (String(news.kecamatan_id) !== String(req.user.profile.kecamatan_id || '')) {
+        return res.status(403).json({ success: false, error: 'Anda hanya dapat menghapus berita di kecamatan Anda.' });
+      }
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('berita')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) return res.status(500).json({ success: false, error: deleteError.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/admin/laporan/kecamatan/:kecamatanId
 router.get('/laporan/kecamatan/:kecamatanId', authenticate, async (req, res) => {
   const { search } = req.query;

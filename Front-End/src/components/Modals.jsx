@@ -103,8 +103,10 @@ export function StatusUpdateModal({ isOpen, statusLabel, onClose, onSubmit }) {
   );
 }
 
-export function DeleteConfirmModal({ isOpen, onClose, onConfirm }) {
+export function DeleteConfirmModal({ isOpen, onClose, onConfirm, title = "Hapus Laporan?", message = "Tindakan ini tidak dapat dibatalkan. Laporan akan dihapus permanen." }) {
   const [loading, setLoading] = useState(false);
+
+  if (!isOpen) return null;
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -119,8 +121,8 @@ export function DeleteConfirmModal({ isOpen, onClose, onConfirm }) {
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Trash2 size={32} />
           </div>
-          <h3 className="text-xl font-black text-slate-800 mb-2">Hapus Laporan?</h3>
-          <p className="text-slate-500 text-sm mb-8">Tindakan ini tidak dapat dibatalkan. Laporan akan dihapus permanen.</p>
+          <h3 className="text-xl font-black text-slate-800 mb-2">{title}</h3>
+          <p className="text-slate-500 text-sm mb-8">{message}</p>
           <div className="flex gap-3">
             <button onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all">Batal</button>
             <button onClick={handleConfirm} disabled={loading} className="flex-1 bg-red-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-red-200">
@@ -134,6 +136,8 @@ export function DeleteConfirmModal({ isOpen, onClose, onConfirm }) {
 }
 
 export function AlertModal({ isOpen, title, message, type, onClose }) {
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl overflow-hidden animate-slide-in-up">

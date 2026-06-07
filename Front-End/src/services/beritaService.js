@@ -100,3 +100,76 @@ export async function getAllBerita() {
     return { success: false, error: err.response?.data?.error || err.message };
   }
 }
+
+export async function updateBerita(id, payload, imageFile) {
+  try {
+    let token = await getValidToken();
+    if (!token) return { success: false, error: 'Token tidak ditemukan' };
+
+    const makeRequest = async () => {
+      const body = new FormData();
+      body.append('judul', payload.judul);
+      body.append('deskripsi', payload.deskripsi);
+      if (payload.remove_image) body.append('remove_image', 'true');
+      if (imageFile) body.append('image', imageFile);
+
+      const res = await fetch(`${API_BASE}/admin/berita/${id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body
+      });
+      const data = await res.json();
+      return { ok: res.ok, status: res.status, data };
+    };
+
+    let response = await makeRequest();
+    if (response.status === 401 && typeof supabase.auth.refreshSession === 'function') {
+      token = await getValidToken();
+      if (!token) return { success: false, error: 'Token tidak ditemukan' };
+      response = await makeRequest();
+    }
+
+    if (!response.ok) {
+      return { success: false, error: response.data?.error || response.data?.details || 'Gagal mengubah berita' };
+    }
+
+    return { success: true, data: response.data };
+  } catch (err) {
+    return { success: false, error: err.message || 'Gagal mengubah berita' };
+  }
+}
+
+export async function deleteBerita(id) {
+  try {
+    let token = await getValidToken();
+    if (!token) return { success: false, error: 'Token tidak ditemukan' };
+
+    const makeRequest = async () => {
+      const res = await fetch(`${API_BASE}/admin/berita/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      return { ok: res.ok, status: res.status, data };
+    };
+
+    let response = await makeRequest();
+    if (response.status === 401 && typeof supabase.auth.refreshSession === 'function') {
+      token = await getValidToken();
+      if (!token) return { success: false, error: 'Token tidak ditemukan' };
+      response = await makeRequest();
+    }
+
+    if (!response.ok) {
+      return { success: false, error: response.data?.error || response.data?.details || 'Gagal menghapus berita' };
+    }
+
+    return { success: true, data: response.data };
+  } catch (err) {
+    return { success: false, error: err.message || 'Gagal menghapus berita' };
+  }
+}
