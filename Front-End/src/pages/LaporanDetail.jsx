@@ -96,7 +96,7 @@ export default function LaporanDetail() {
 
         <InformasiAdmin laporanId={data.id} />
 
-        <LaporanHistory history={data.history} />
+        <LaporanHistory history={data.history} canView={data.can_view_history} />
 
         <div className="mt-4">
           <p className="font-semibold flex items-center mb-2">

@@ -1,7 +1,16 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 
-export default function LaporanHistory({ history = [] }) {
+export default function LaporanHistory({ history = [], canView = false }) {
+  if (!canView) {
+    return (
+      <div className="bg-white rounded-2xl shadow p-6 mb-6">
+        <h2 className="font-bold mb-2">Riwayat Perubahan</h2>
+        <p className="text-sm text-gray-500">Hanya akun kecamatan/super admin yang dapat melihat riwayat laporan.</p>
+      </div>
+    );
+  }
+
   if (!history || history.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow p-6 mb-6">
