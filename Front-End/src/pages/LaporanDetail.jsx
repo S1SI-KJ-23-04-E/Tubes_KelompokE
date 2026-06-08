@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import { ArrowLeft, Clock, MapPin } from 'lucide-react';
 import InformasiAdmin from "../components/InformasiAdmin";
+import LaporanHistory from '../components/LaporanHistory';
 
 export default function LaporanDetail() {
   const { id } = useParams();
@@ -94,6 +95,8 @@ export default function LaporanDetail() {
         </div>
 
         <InformasiAdmin laporanId={data.id} />
+
+        <LaporanHistory history={data.history} canView={data.can_view_history} />
 
         <div className="mt-4">
           <p className="font-semibold flex items-center mb-2">

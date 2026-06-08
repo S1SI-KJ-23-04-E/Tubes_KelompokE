@@ -21,6 +21,14 @@ DROP POLICY IF EXISTS "history_laporan_insert_authenticated" ON history_laporan;
 CREATE POLICY "history_laporan_insert_authenticated" ON history_laporan 
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "informasi_laporan_select_all" ON informasi_laporan;
+CREATE POLICY "informasi_laporan_select_all" ON informasi_laporan 
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "informasi_laporan_insert_authenticated" ON informasi_laporan;
+CREATE POLICY "informasi_laporan_insert_authenticated" ON informasi_laporan 
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
 -- 3. BUKTI_SELESAI
 DROP POLICY IF EXISTS "bukti_selesai_select_all" ON bukti_selesai;
 CREATE POLICY "bukti_selesai_select_all" ON bukti_selesai 

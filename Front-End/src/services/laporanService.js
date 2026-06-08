@@ -92,42 +92,18 @@ export async function getLaporanByUser() {
 // ===============================
 export async function getLaporanById(id) {
   try {
-    const { data, error } = await supabase
-      .from('laporan')
-      .select(`
-        *,
-        kecamatan ( id, nama_kecamatan ),
-        kelurahan ( id, nama_kelurahan ),
-        profiles ( id, nama )
-      `)
-      .eq('id', id)
-      .single();
+    // Prefer backend API which enforces history visibility rules
+    const res = await fetch(`${API_BASE_URL}/laporan/${id}`, {
+      headers: await getAuthHeaders().catch(() => ({ 'Content-Type': 'application/json' }))
+    });
 
-    if (error) throw error;
+    const json = await res.json();
+    if (!res.ok) {
+      console.warn('Backend laporan detail returned error:', json);
+      return { success: false, data: null };
+    }
 
-    // history
-    const { data: history } = await supabase
-      .from('history_laporan')
-      .select('*')
-      .eq('laporan_id', id)
-      .order('created_at', { ascending: true });
-
-    // bukti selesai
-    const { data: bukti } = await supabase
-      .from('bukti_selesai')
-      .select('*')
-      .eq('laporan_id', id)
-      .maybeSingle();
-
-    return {
-      success: true,
-      data: {
-        ...data,
-        history: history || [],
-        bukti: bukti || null
-      }
-    };
-
+    return { success: true, data: json.data };
   } catch (error) {
     console.error('getLaporanById error:', error);
     return { success: false, data: null };
