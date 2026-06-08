@@ -78,6 +78,7 @@ router.get('/:id', async (req, res) => {
 
     // Default: jangan sertakan history
     laporan.history = [];
+    laporan.can_view_history = false;
 
     // Jika ada token/user, cek role — hanya `kecamatan` atau `super_admin` boleh melihat history
     const authHeader = req.headers.authorization?.replace('Bearer ', '');
@@ -99,6 +100,7 @@ router.get('/:id', async (req, res) => {
             .order('created_at', { ascending: true });
 
           laporan.history = history || [];
+          laporan.can_view_history = true;
         }
       }
     }
