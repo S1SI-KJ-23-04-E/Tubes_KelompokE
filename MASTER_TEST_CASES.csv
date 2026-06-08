@@ -1,0 +1,332 @@
+Scenario ID,Test Case ID,Module,Feature,Category,Type,Priority,Status,Test Scenario,Pre Condition,Steps,Expected Result,Notes
+SC-001,TC-001,Authentication,Login,Functional,Positive,High,Approved,Pengguna berhasil login dengan kredensial valid,"- Pengguna telah membuka aplikasi web
+- Pengguna belum terautentikasi
+- Koneksi ke backend server aktif
+- Database Supabase dapat diakses","1. Buka halaman 'Login'
+2. Isi field 'Email' dengan email terdaftar valid
+3. Isi field 'Password' dengan password yang benar
+4. Klik tombol 'Login'
+5. Tunggu response dari server","- Autentikasi berhasil
+- Token disimpan di session lokal
+- Pengguna diarahkan ke halaman 'Laporan'
+- Navbar menampilkan nama pengguna
+- Tidak ada pesan error",
+SC-002,TC-002,Authentication,Login,Functional,Negative,High,Approved,Pengguna gagal login dengan password salah,"- Pengguna telah membuka aplikasi web
+- Email akun sudah terdaftar di sistem
+- Koneksi ke backend server aktif","1. Buka halaman 'Login'
+2. Isi field 'Email' dengan email yang terdaftar
+3. Isi field 'Password' dengan password yang salah
+4. Klik tombol 'Login'","- Sistem menampilkan pesan error: 'Email atau password salah'
+- Pengguna tetap berada di halaman 'Login'
+- Tidak ada redirect
+- Field password dikosongkan",
+SC-003,TC-003,Authentication,Login,Functional,Negative,High,Approved,Pengguna gagal login tanpa mengisi email,"- Pengguna telah membuka aplikasi web
+- Halaman 'Login' sudah siap","1. Buka halaman 'Login'
+2. Kosongkan field 'Email'
+3. Isi field 'Password' dengan password apapun
+4. Klik tombol 'Login'","- Browser validation menolak submit
+- Pesan error HTML5: 'Email wajib diisi'
+- Tombol 'Login' tidak aktif/disabled
+- Form tidak terkirim ke server",
+SC-004,TC-004,Authentication,Login,Functional,BVA,High,Approved,Pengguna gagal login dengan email yang tidak terdaftar,"- Pengguna telah membuka aplikasi web
+- Email tidak pernah terdaftar di sistem","1. Buka halaman 'Login'
+2. Isi field 'Email' dengan email yang tidak terdaftar
+3. Isi field 'Password' dengan password apapun
+4. Klik tombol 'Login'","- Sistem menampilkan pesan error: 'Email atau password salah'
+- Error message generic
+- Pengguna tetap di halaman 'Login'",
+SC-005,TC-005,Authentication,Logout,Functional,EP,Medium,Approved,Pengguna berhasil logout dari aplikasi,"- Pengguna sudah terautentikasi dan login
+- Berada di halaman 'Laporan' atau halaman yang dilindungi","1. Lihat tombol 'Keluar' di navbar
+2. Klik tombol 'Keluar'
+3. Tunggu session dihapus","- Session user dihapus
+- User diarahkan ke halaman 'Login'
+- Token tidak lagi tersimpan di browser
+- Akses ke halaman protected tertolak",
+SC-006,TC-006,Registration,Sign Up,Functional,Positive,High,Approved,Pengguna berhasil mendaftar dengan @gmail.com dan password valid,"- Pengguna belum memiliki akun
+- Halaman 'Register' dapat diakses
+- Email @gmail.com belum terdaftar","1. Buka halaman 'Register'
+2. Isi field 'Nama Lengkap' dengan nama valid
+3. Pilih 'Kecamatan Domisili' (opsional)
+4. Isi field 'Email' dengan email @gmail.com valid
+5. Isi field 'Password' minimal 6 karakter
+6. Klik tombol 'Daftar Sekarang'
+7. Tunggu konfirmasi dari server","- Akun user berhasil dibuat di Supabase
+- Role otomatis set ke 'warga'
+- Sistem menampilkan pesan: 'Pendaftaran berhasil!'
+- User diarahkan ke halaman 'Login'
+- Profile record dibuat di tabel 'profiles'",
+SC-007,TC-007,Registration,Sign Up,Functional,Negative,High,Approved,Pengguna gagal mendaftar dengan email non-@gmail.com,"- Pengguna belum memiliki akun
+- Halaman 'Register' dapat diakses","1. Buka halaman 'Register'
+2. Isi field 'Nama Lengkap'
+3. Isi field 'Email' dengan email non-@gmail.com
+4. Isi field 'Password' valid
+5. Klik tombol 'Daftar Sekarang'","- Sistem menampilkan error: 'Hanya email @gmail.com yang diizinkan'
+- Akun tidak dibuat
+- User tetap di halaman 'Register'",
+SC-008,TC-008,Registration,Sign Up,Functional,Negative,High,Approved,Pengguna gagal mendaftar password < 6 karakter,"- Pengguna belum memiliki akun
+- Halaman 'Register' dapat diakses","1. Buka halaman 'Register'
+2. Isi field 'Nama Lengkap'
+3. Isi field 'Email' dengan email @gmail.com
+4. Isi field 'Password' dengan < 6 karakter
+5. Klik tombol 'Daftar Sekarang'","- Sistem menampilkan error: 'Password minimal 6 karakter'
+- Akun tidak dibuat
+- User tetap di halaman 'Register'",
+SC-009,TC-009,Registration,Sign Up,Functional,BVA,High,Approved,Pengguna gagal mendaftar dengan nama kosong,"- Halaman 'Register' dapat diakses","1. Buka halaman 'Register'
+2. Kosongkan field 'Nama Lengkap'
+3. Isi field lain dengan benar
+4. Klik tombol 'Daftar Sekarang'","- Browser validation menolak submit
+- Pesan: 'Nama Lengkap wajib diisi'
+- Form tidak terkirim",
+SC-010,TC-010,Registration,Sign Up,Functional,EP,High,Approved,Pengguna berhasil mendaftar dan pilih kecamatan,"- Pengguna belum memiliki akun
+- Daftar kecamatan tersedia di dropdown","1. Buka halaman 'Register'
+2. Isi 'Nama Lengkap'
+3. Klik dropdown 'Kecamatan Domisili' dan pilih satu
+4. Isi 'Email' dan 'Password' dengan benar
+5. Klik tombol 'Daftar Sekarang'","- Akun berhasil dibuat
+- Field 'kecamatan_id' tersimpan di profile
+- User dapat login dan profile menampilkan kecamatan pilihan",
+SC-011,TC-011,Reports,Create Laporan,Functional,Positive,High,Approved,Pengguna berhasil membuat laporan dengan data wajib lengkap,"- Pengguna sudah login sebagai warga
+- Berada di halaman 'Laporan Form'
+- Koneksi internet stabil
+- Geolocation tersedia","1. Buka halaman 'Laporan Form'
+2. Isi field 'Judul'
+3. Pilih 'Kecamatan' dari dropdown
+4. Pilih 'Kelurahan' dari dropdown
+5. Isi field 'Deskripsi' dengan detail masalah
+6. Isi field 'Alamat' dengan lokasi spesifik
+7. Upload foto bukti (opsional)
+8. Klik tombol 'Buat Laporan'","- Laporan tersimpan di database dengan status 'pending'
+- Geolocation otomatis diisi
+- User diarahkan ke halaman 'Laporan' tab 'History Saya'
+- Laporan baru tampil di list dengan status 'Menunggu Verifikasi'
+- Tidak ada error message",
+SC-012,TC-012,Reports,Create Laporan,Functional,Negative,High,Approved,Pengguna gagal membuat laporan jika kecamatan/kelurahan kosong,"- Pengguna sudah login
+- Berada di halaman 'Laporan Form'","1. Buka halaman 'Laporan Form'
+2. Isi field 'Judul', 'Deskripsi', 'Alamat'
+3. JANGAN pilih 'Kecamatan' atau 'Kelurahan'
+4. Klik tombol 'Buat Laporan'","- Sistem menampilkan modal dialog error: 'Harap pilih Kecamatan dan Kelurahan'
+- Laporan tidak tersimpan
+- User tetap di halaman form",
+SC-013,TC-013,Reports,View Laporan,Functional,Positive,High,Approved,Pengguna berhasil melihat daftar laporan publik dari warga lain,"- Pengguna sudah login sebagai warga
+- Minimal ada 1 laporan dari user lain di database","1. Login sebagai warga
+2. Buka menu 'Laporan Publik' atau tab 'Laporan Publik'
+3. Amati daftar laporan
+4. Klik salah satu laporan untuk melihat detail","- Sistem menampilkan daftar laporan dari warga lain
+- Laporan pribadi tidak tampil
+- Setiap laporan menampilkan: judul, lokasi, status, upvote count
+- Detail laporan dapat dibuka",
+SC-014,TC-014,Reports,View Laporan,Functional,Negative,High,Approved,Pengguna gagal menghapus laporan yang sudah terverifikasi,"- Pengguna login sebagai warga
+- Memiliki laporan dengan status != 'pending'","1. Buka halaman 'History Saya'
+2. Cari laporan dengan status bukan 'Menunggu Verifikasi'
+3. Klik tombol delete/hapus pada laporan","- Tombol hapus tidak aktif atau tidak tampil
+- System tidak mengizinkan penghapusan laporan non-pending
+- Pesan informasi tampil",
+SC-015,TC-015,Reports,Create Laporan,Functional,BVA,Medium,Approved,Pengguna berhasil membuat laporan tanpa upload foto,"- Pengguna login sebagai warga
+- Berada di form laporan","1. Isi semua field (judul, deskripsi, alamat, kecamatan, kelurahan)
+2. JANGAN upload foto
+3. Klik tombol 'Buat Laporan'","- Laporan tetap tersimpan dengan 'foto_url' = null
+- Tidak ada error
+- Laporan dapat dilihat dengan field foto kosong/blank",
+SC-016,TC-016,Laporan Detail,Upvote,Functional,Positive,High,Approved,Pengguna berhasil memberikan dukungan pada laporan aktif,"- Pengguna login sebagai warga
+- Laporan target berstatus 'pending', 'verified', atau 'in_progress'
+- User belum pernah upvote laporan ini","1. Buka halaman 'Laporan Detail' dari halaman 'Laporan Publik'
+2. Lihat tombol 'Dukung Laporan Ini'
+3. Klik tombol dukungan","- Tombol berubah label menjadi 'Laporan Didukung ✓'
+- Warna tombol berubah (highlight)
+- Jumlah dukungan bertambah 1
+- Tidak ada error
+- Data tersimpan di database tabel 'upvote'",
+SC-017,TC-017,Laporan Detail,Upvote,Functional,Negative,High,Approved,Pengguna gagal memberikan dukungan pada laporan selesai/ditolak,"- Pengguna login sebagai warga
+- Laporan target berstatus 'done' atau 'rejected'","1. Buka halaman 'Laporan Detail' dari laporan dengan status selesai
+2. Amati tombol dukungan","- Tombol dukungan tidak aktif/disabled
+- Teks helper tampil: 'Dukungan ditutup karena laporan telah selesai'
+- User tidak dapat klik tombol
+- Upvote tidak berubah",
+SC-018,TC-018,Laporan Detail,Upvote,Functional,Negative,High,Approved,Pengguna gagal memberikan dukungan tanpa login,"- Pengguna belum login
+- Halaman 'Laporan Detail' dapat diakses public","1. Logout atau buka URL laporan detail tanpa login
+2. Amati tombol dukungan","- Tombol dukungan tidak aktif
+- Teks helper: 'Login untuk memberikan dukungan'
+- Upvote tidak berubah
+- Klik tombol tidak menghasilkan aksi",
+SC-019,TC-019,Laporan Detail,Upvote,Functional,Positive,Medium,Approved,Pengguna berhasil membatalkan dukungan pada laporan,"- Pengguna login sebagai warga
+- Pengguna sudah upvote laporan ini sebelumnya
+- Laporan masih dalam status aktif","1. Buka halaman 'Laporan Detail' dari laporan yang sudah di-upvote
+2. Lihat tombol dengan label 'Laporan Didukung ✓'
+3. Klik tombol untuk membatalkan dukungan","- Toggle upvote berhasil
+- Tombol kembali ke label 'Dukung Laporan Ini'
+- Jumlah dukungan berkurang 1
+- Database diupdate: upvote record dihapus",
+SC-020,TC-020,Laporan Detail,Upload Bukti,Functional,Positive,High,Approved,Admin petugas berhasil mengunggah bukti penyelesaian,"- Pengguna login sebagai petugas/kecamatan
+- Laporan dalam status 'in_progress'
+- Belum ada bukti selesai
+- Foto bukti sudah disiapkan (JPG/PNG)","1. Buka halaman 'Laporan Detail' dari laporan in_progress
+2. Klik tombol 'Upload Bukti Selesai'
+3. Modal dialog terbuka
+4. Klik area foto untuk browse file
+5. Pilih file foto (JPG/PNG, max 10MB)
+6. Isi field 'Keterangan Bukti' dengan deskripsi
+7. Klik tombol 'Kirim Bukti'","- Foto berhasil di-upload ke Supabase storage
+- Laporan status berubah ke 'done' / 'selesai'
+- Record 'bukti_selesai' dibuat di database
+- Modal tertutup
+- Halaman refresh menampilkan section 'Perbaikan Selesai' dengan foto
+- Timeline menampilkan event status change",
+SC-021,TC-021,Laporan Detail,Upload Bukti,Functional,Negative,High,Approved,Petugas gagal mengunggah bukti tanpa memilih foto,"- Petugas membuka modal 'Upload Bukti Selesai'
+- Laporan status 'in_progress'","1. Buka modal 'Upload Bukti Selesai'
+2. Biarkan field foto kosong (tidak pilih file)
+3. Isi field 'Keterangan Bukti'
+4. Amati tombol 'Kirim Bukti'","- Tombol 'Kirim Bukti' disabled/tidak aktif
+- Tidak bisa submit
+- Pesan error tidak ada (button disabled saja cukup)",
+SC-022,TC-022,Laporan Detail,Kendala,Functional,Positive,Medium,Approved,Petugas berhasil melaporkan kendala lapangan saat in_progress,"- Pengguna login sebagai petugas
+- Laporan dalam status 'in_progress'
+- Halaman 'Laporan Detail' terbuka","1. Lihat tombol 'Lapor Kendala'
+2. Klik tombol
+3. Modal dialog 'Laporan Kendala' terbuka
+4. Isi field deskripsi kendala: 'Cuaca buruk, pekerjaan tertunda'
+5. Klik tombol 'Kirim Laporan Kendala'","- Kendala berhasil disimpan di tabel 'kendala_laporan'
+- Modal tertutup
+- Halaman refresh
+- Section 'Kendala Lapangan' tampil dengan kendala baru
+- Timeline terupdate",
+SC-023,TC-023,Laporan Detail,Kendala,Functional,Negative,Medium,Approved,Petugas gagal melaporkan kendala dengan deskripsi kosong,"- Modal 'Laporan Kendala' terbuka
+- Pengguna login sebagai petugas","1. Buka modal 'Laporan Kendala'
+2. Biarkan field deskripsi kosong
+3. Amati tombol 'Kirim Laporan Kendala'","- Tombol disabled/tidak aktif
+- Tidak bisa submit
+- Pesan placeholder: 'Jelaskan kendala teknis atau lapangan...'",
+SC-024,TC-024,Admin Actions,Status Update,Functional,Positive,High,Approved,Admin berhasil memverifikasi laporan dari pending ke verified,"- Pengguna login sebagai admin kecamatan atau super_admin
+- Laporan dalam status 'pending'
+- Halaman 'Laporan Detail' terbuka","1. Buka halaman 'Laporan Detail' dari laporan dengan status 'Menunggu Verifikasi'
+2. Lihat tombol '✓ Verifikasi' di section panel admin
+3. Klik tombol verifikasi","- Laporan status berubah ke 'verified' / 'Terverifikasi'
+- Progress bar stepper bergerak ke step 2
+- Timeline terupdate dengan event verifikasi
+- Badge status berubah dari kuning (pending) ke biru (verified)
+- Petugas/tim lapangan bisa mulai perbaikan",
+SC-025,TC-025,Admin Actions,Status Update,Functional,Negative,High,Approved,Admin gagal menyelesaikan laporan tanpa bukti foto,"- Admin login sebagai moderator
+- Laporan dalam status 'in_progress'
+- BELUM ada bukti_selesai yang terupload
+- Halaman 'Laporan Detail' terbuka","1. Scroll ke panel admin section
+2. Amati area tombol untuk mengubah status menjadi 'Selesai'","- Tombol '✓ Selesai' tidak tampil / hidden
+- Pesan penjelas tampil: 'Menunggu petugas mengunggah bukti selesai.'
+- Admin tidak bisa force-complete tanpa bukti
+- Status tetap 'in_progress'",
+SC-026,TC-026,Admin Actions,Status Update,Functional,Positive,High,Approved,Admin berhasil menolak laporan dengan keterangan penolakan,"- Admin login sebagai kecamatan/super_admin
+- Laporan dalam status 'pending'","1. Buka 'Laporan Detail' dari laporan pending
+2. Lihat tombol '✕ Tolak' di panel admin
+3. Klik tombol tolak
+4. Modal dialog terbuka untuk input keterangan
+5. Isi keterangan penolakan: 'Laporan tidak jelas, foto tidak valid'
+6. Klik tombol 'Konfirmasi Penolakan'","- Laporan status berubah ke 'rejected' / 'Ditolak'
+- Badge status berubah merah
+- Pelapor mendapat notifikasi penolakan
+- Timeline mencatat event penolakan dengan keterangan
+- Progress badge tampil status ditolak (X icon merah)",
+SC-027,TC-027,Admin Actions,Priority,Functional,Positive,Medium,Approved,Admin berhasil mengubah prioritas laporan dari low ke high,"- Admin login sebagai kecamatan/super_admin
+- Laporan tersedia dengan prioritas 'low'","1. Buka 'Laporan Detail' atau 'Laporan List'
+2. Lihat dropdown/button prioritas
+3. Klik 'HIGH' untuk mengubah prioritas","- Prioritas laporan berubah ke 'high'
+- Visual indicator berubah (color/badge)
+- Database terupdate
+- Laporan akan muncul lebih atas di list
+- Timestamp 'updated_at' terupdate",
+SC-028,TC-028,Admin Actions,Notes,Functional,Positive,Medium,Approved,Admin berhasil menambahkan catatan internal pada laporan,"- Admin login sebagai kecamatan/super_admin
+- Halaman 'Laporan Detail' terbuka","1. Klik tombol/icon untuk mengedit catatan
+2. Modal catatan terbuka
+3. Isi field dengan catatan internal: 'Perlu koordinasi dengan dinas PU'
+4. Klik tombol 'Simpan Catatan'","- Catatan tersimpan di field 'catatan' laporan
+- Modal tertutup
+- Halaman refresh
+- Catatan tampil di section catatan admin (highlight)
+- Timeline mencatat perubahan",
+SC-029,TC-029,Profile,Update Profile,Functional,Positive,High,Approved,Pengguna berhasil memperbarui profil dengan field valid,"- Pengguna login
+- Berada di halaman 'Profil'
+- Internet aktif","1. Buka halaman 'Profil'
+2. Isi field 'Nama Lengkap': 'Budi Santoso'
+3. Isi field 'Alamat': 'Jl. Contoh No 10'
+4. Isi field 'Nomor HP': '081234567890'
+5. Klik tombol 'Simpan Perubahan'","- Profil berhasil disimpan
+- Sistem menampilkan pesan: 'Profil berhasil diperbarui.'
+- Progress bar completion mencapai 100%
+- Nama di navbar terupdate real-time
+- Tidak ada error",
+SC-030,TC-030,Profile,Update Profile,Functional,Negative,High,Approved,Pengguna gagal update profil dengan nomor HP non-digit,"- Pengguna berada di halaman profile update
+- Field nama dan alamat sudah terisi","1. Buka halaman 'Profil'
+2. Isi field 'Nomor HP' dengan karakter non-digit: '08-1234-567890'
+3. Klik tombol 'Simpan Perubahan'","- Sistem menampilkan error: 'Hanya boleh angka'
+- Perubahan tidak tersimpan
+- Field phone menampilkan red border/error state",
+SC-031,TC-031,Profile,Update Profile,Functional,BVA,High,Approved,Pengguna gagal update profil nomor HP < 10 digit,"- Pengguna berada di halaman profile
+- Field lain valid","1. Isi field 'Nomor HP' dengan 9 digit: '081234567'
+2. Klik tombol 'Simpan Perubahan'","- Sistem menampilkan error: 'Minimal 10 digit'
+- Perubahan tidak tersimpan
+- Phone field error state",
+SC-032,TC-032,Profile,Update Profile,Functional,EP,High,Approved,Pengguna berhasil update profil nomor HP exactly 10 digit,"- Pengguna di halaman profile
+- Nama dan alamat terisi","1. Isi field 'Nomor HP' dengan exactly 10 digit: '0812345678'
+2. Klik tombol 'Simpan Perubahan'","- Profil berhasil tersimpan
+- No HP valid (tidak error)
+- Check mark tampil di field",
+SC-033,TC-033,Admin Dashboard,Super Admin,Functional,Positive,High,Approved,Super admin berhasil melihat dashboard dengan performa semua kecamatan,"- User login sebagai 'super_admin'
+- Minimal ada data laporan dari 2+ kecamatan","1. Login sebagai super admin
+2. Navigasi ke menu 'Dashboard' atau halaman super admin
+3. Halaman 'SuperAdminDashboard' load","- Dashboard menampilkan:
+  - Total laporan keseluruhan
+  - Ranking kecamatan by laporan selesai
+  - KPI metrics (avg resolution time, response rate)
+  - Table kecamatan dengan statistik
+- Data akurat sesuai database
+- Tidak ada error",
+SC-034,TC-034,Admin Dashboard,Kecamatan,Functional,Positive,High,Approved,Admin kecamatan berhasil melihat dashboard kecamatannya,"- User login sebagai 'kecamatan' (admin kecamatan)
+- Ada laporan di kecamatan tersebut","1. Login sebagai admin kecamatan
+2. Buka halaman dashboard
+3. 'AdminKecamatanDashboard' load","- Dashboard menampilkan data kecamatan spesifik saja
+- Menampilkan: pending count, in_progress count, done count
+- Distribution bar dengan persentase
+- Notification badge untuk pending reports
+- Tidak menampilkan data kecamatan lain",
+SC-035,TC-035,Admin Dashboard,Access Control,Functional,Negative,High,Approved,Warga gagal mengakses dashboard admin,"- User login sebagai 'warga'
+- Mencoba akses URL '/dashboard' atau admin menu","1. Login sebagai warga
+2. Navigasi ke URL '/dashboard' atau klik menu dashboard
+3. Sistem cek role & permission","- User diarahkan redirect ke halaman '/laporan' (default warga)
+- Dashboard admin tidak ditampilkan
+- Tidak ada akses error, hanya redirect silent",
+SC-036,TC-036,Duplicate Detection,Detect,Functional,Positive,Medium,Approved,Admin berhasil mendeteksi laporan duplikat berdasarkan lokasi,"- Admin login sebagai kecamatan/super_admin
+- Ada 2+ laporan dengan lokasi berdekatan (< 50 meter)
+- Berada di tab 'Duplikat' di 'LaporanList'","1. Buka tab 'Duplikat' di menu admin
+2. Sistem auto-load duplicate groups
+3. Amati hasil deteksi
+4. Default radius: 50 meter","- Sistem menampilkan daftar grup laporan duplikat
+- Setiap grup menampilkan: laporan 1, laporan 2, jarak, similarity score
+- User bisa see laporan mana yang duplikat
+- Tombol 'Merge' tersedia untuk setiap grup",
+SC-037,TC-037,Duplicate Detection,Merge,Functional,Positive,Medium,Approved,Admin berhasil merge laporan duplikat ke laporan primary,"- Admin berada di tab 'Duplikat'
+- Ada minimal 1 duplikat group dengan 2+ laporan
+- Laporan primary dan secondary sudah diidentifikasi","1. Klik tombol 'Merge' pada salah satu duplikat group
+2. Modal merge terbuka
+3. Pilih laporan primary (dari radio/select)
+4. Secondary laporan akan di-merge ke primary
+5. Klik tombol 'Konfirmasi Merge'","- Secondary laporan ditandai sebagai duplikat
+- Upvote dari secondary digabung ke primary
+- Primary laporan upvote_count meningkat
+- Secondary laporan dihapus atau di-mark as deleted
+- Timeline kedua laporan terupdate
+- Notifikasi dikirim ke kedua pelapor",
+SC-038,TC-038,Duplicate Detection,Radius Adjustment,Functional,Positive,Low,Approved,Admin berhasil mengubah radius deteksi duplikat,"- Admin di tab 'Duplikat'
+- Interface menampilkan radius slider/input","1. Amati radius slider (default 50 meter)
+2. Ubah radius ke 25 meter
+3. Sistem auto-reload dengan radius baru","- Hasil deteksi duplikat berubah (lebih ketat)
+- Lebih sedikit laporan yang terdeteksi duplikat
+- Display updated dengan grup baru",
+SC-039,TC-039,Security,Protected Routes,Functional,Negative,High,Approved,Pengguna tidak terautentikasi gagal mengakses halaman dilindungi,"- User belum login atau session sudah expired
+- Mencoba akses '/laporan' atau halaman protected lain","1. Buka URL '/laporan' tanpa login
+2. Atau logout dulu, lalu akses protected route","- Browser redirect ke '/login'
+- ProtectedRoute component menangkap dan redirect
+- User tidak bisa lihat halaman protected
+- Pesan implicit: 'Silakan login terlebih dahulu'",
+SC-040,TC-040,Security,Role-Based Access,Functional,Negative,High,Approved,Petugas gagal mengakses fitur admin super admin,"- User login sebagai 'petugas'
+- Mencoba akses fitur super_admin only","1. Login sebagai petugas
+2. Coba akses tab 'Duplicate Detection' (super_admin only)
+3. Atau coba akses '/dashboard' (super admin)","- Tab/menu tidak tampil (hidden)
+- Atau jika URL diakses langsung, redirect ke halaman yang diizinkan
+- Tidak ada akses, permission denied implicit",
