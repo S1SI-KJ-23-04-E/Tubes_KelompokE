@@ -97,6 +97,15 @@ CREATE TABLE history_laporan (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Tabel Informasi Admin / Catatan tambahan
+CREATE TABLE informasi_laporan (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  laporan_id UUID REFERENCES laporan(id) ON DELETE CASCADE,
+  catatan TEXT NOT NULL,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Tabel Notifikasi
 CREATE TABLE notifikasi (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

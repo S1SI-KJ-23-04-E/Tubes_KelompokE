@@ -4,6 +4,17 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
+async function getUserRole(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) return null;
+  return data.role;
+}
+
 // POST /api/informasi-tambahan/laporan/:id — tambahkan informasi tambahan
 router.post('/laporan/:id', authenticate, async (req, res) => {
   try {
@@ -18,13 +29,20 @@ router.post('/laporan/:id', authenticate, async (req, res) => {
       });
     }
 
+    const role = await getUserRole(userId);
+    if (!['kecamatan', 'super_admin'].includes(role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya admin kecamatan atau super admin yang dapat mengirim informasi tambahan.'
+      });
+    }
+
     const { error } = await supabaseAdmin
-      .from('history_laporan')
+      .from('informasi_laporan')
       .insert({
         laporan_id: laporanId,
-        status: 'informasi_admin',
         catatan,
-        changed_by: userId,
+        created_by: userId,
       });
 
     if (error) throw error;
@@ -46,10 +64,9 @@ router.get('/laporan/:id', authenticate, async (req, res) => {
   try {
     const laporanId = req.params.id;
     const { data, error } = await supabaseAdmin
-      .from('history_laporan')
+      .from('informasi_laporan')
       .select('*')
       .eq('laporan_id', laporanId)
-      .eq('status', 'informasi_admin')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -67,3 +84,4 @@ router.get('/laporan/:id', authenticate, async (req, res) => {
 });
 
 export default router;
+ 
