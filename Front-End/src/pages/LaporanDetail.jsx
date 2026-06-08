@@ -4,6 +4,7 @@ import { getLaporanById, upvoteLaporan, updateLaporanStatus, createKendala } fro
 import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import UploadBuktiModal from '../components/UploadBuktiModal';
+<<<<<<< Updated upstream
 import KendalaForm from '../components/KendalaForm';
 import { createNotifikasi } from '../services/notifikasiService';
 import {
@@ -14,6 +15,15 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { StatusUpdateModal, AlertModal } from '../components/Modals';
+=======
+import { 
+  ArrowLeft, Clock, MapPin, CheckCircle2, User, 
+  ThumbsUp, Building2, MapPinned, AlertTriangle, 
+  FileText, ImageIcon, Camera, Star, ChevronRight, Inbox,
+  ShieldCheck, ArrowUpCircle, XCircle, Share2, Info,
+  Wrench, Flag, Ban
+} from 'lucide-react';
+>>>>>>> Stashed changes
 import { supabase } from '../lib/supabase';
 
 /* ─────────────── CONFIGS ─────────────── */
@@ -32,12 +42,24 @@ const PRIORITY_MAP = {
   low:    { label: 'Prioritas Rendah', short: 'RENDAH', color: 'bg-slate-50 text-slate-600 border-slate-200', bar: 'bg-slate-400',  dot: 'bg-slate-400' },
 };
 
+<<<<<<< Updated upstream
 const PROGRESS_STEPS = [
   { key: 'pending',     label: 'Dilaporkan',  icon: FileText },
   { key: 'verified',    label: 'Diverifikasi', icon: ShieldCheck },
   { key: 'in_progress', label: 'Diproses',    icon: Wrench },
   { key: 'done',        label: 'Selesai',      icon: CheckCircle2 },
 ];
+=======
+const TIMELINE_CONFIG = {
+  pending: { line: 'bg-yellow-200', circle: 'bg-yellow-400', text: 'text-yellow-800', icon: AlertTriangle },
+  verified: { line: 'bg-blue-200', circle: 'bg-blue-500', text: 'text-blue-800', icon: CheckCircle2 },
+  in_progress: { line: 'bg-orange-200', circle: 'bg-orange-400', text: 'text-orange-800', icon: Clock },
+  done: { line: 'bg-green-200', circle: 'bg-green-500', text: 'text-green-800', icon: CheckCircle2 },
+  selesai: { line: 'bg-green-200', circle: 'bg-green-500', text: 'text-green-800', icon: CheckCircle2 },
+  diproses: { line: 'bg-orange-200', circle: 'bg-orange-400', text: 'text-orange-800', icon: Clock },
+  rejected: { line: 'bg-red-200', circle: 'bg-red-400', text: 'text-red-800', icon: AlertTriangle }
+};
+>>>>>>> Stashed changes
 
 /* ─────────────── PROGRESS BAR ─────────────── */
 function ProgressStepper({ status }) {
@@ -145,16 +167,27 @@ export default function LaporanDetail() {
   const [imgLoaded, setImgLoaded] = useState(false);
 
   const safeStatus = typeof data?.status === 'string' && data.status.trim() ? data.status : 'pending';
+<<<<<<< Updated upstream
+=======
+  const safeHistoryStatus = (value) => (typeof value === 'string' && value.trim() ? value : 'pending');
+>>>>>>> Stashed changes
   const userKecamatanId = profile?.kecamatan_id || profile?.kecamatan?.id;
   const laporanKecamatanId = data?.kecamatan?.id || data?.kecamatan_id;
   const sameKecamatan = String(userKecamatanId || '') === String(laporanKecamatanId || '');
   const canModerate = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
+<<<<<<< Updated upstream
   const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['petugas'].includes(profile?.role));
   const isPelapor = String(user?.id || '') === String(data?.pelapor_id || '');
   const isInternalRole = ['petugas', 'kecamatan', 'super_admin'].includes(profile?.role);
   const canSubmitFeedback = Boolean(user) && !isInternalRole && isPelapor;
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'kecamatan' || profile?.role === 'petugas';
   const isDone = data?.status === 'done';
+=======
+  const canWorkAction = profile?.role === 'super_admin' || (sameKecamatan && ['kecamatan', 'petugas'].includes(profile?.role));
+  const isPelapor = String(user?.id || '') === String(data?.pelapor_id || '');
+  const isInternalRole = ['petugas', 'kecamatan', 'super_admin'].includes(profile?.role);
+  const canSubmitFeedback = Boolean(user) && !isInternalRole && isPelapor;
+>>>>>>> Stashed changes
 
   const [statusModal, setStatusModal] = useState({ open: false, nextStatus: '', statusLabel: '' });
   const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'error' });
@@ -164,6 +197,7 @@ export default function LaporanDetail() {
   const loadData = async () => {
     setLoading(true);
     const result = await getLaporanById(id);
+<<<<<<< Updated upstream
     if (result.success) setData(result.data);
     else { 
       setAlertModal({ 
@@ -173,6 +207,13 @@ export default function LaporanDetail() {
         type: 'error' 
       });
       setTimeout(() => navigate('/laporan'), 2000);
+=======
+    if (result.success) {
+      setData(result.data);
+    } else {
+      alert('Laporan tidak ditemukan');
+      navigate('/laporan');
+>>>>>>> Stashed changes
     }
     setLoading(false);
   };
@@ -219,8 +260,17 @@ export default function LaporanDetail() {
   };
 
   const handleUploadSubmit = async ({ file, catatan: catatanBukti }) => {
+<<<<<<< Updated upstream
     setUploadError(''); setUploadSuccess(''); setActionLoading(true);
     const { success, error } = await updateLaporanStatus(id, 'done', file, catatanBukti);
+=======
+    setUploadError('');
+    setUploadSuccess('');
+    setActionLoading(true);
+
+    const { success, error } = await updateLaporanStatus(id, 'done', file, catatanBukti);
+
+>>>>>>> Stashed changes
     setActionLoading(false);
     if (success) { setUploadSuccess('Bukti berhasil dikirim.'); setUploadModalOpen(false); loadData(); }
     else setUploadError(error || 'Gagal mengirim bukti.');
@@ -277,6 +327,7 @@ export default function LaporanDetail() {
   const priorityCfg = PRIORITY_MAP[priorityVal];
 
   return (
+<<<<<<< Updated upstream
     <div className="min-h-screen bg-[#F4F6FB]">
 
       {/* ── TOPBAR ── */}
@@ -285,6 +336,14 @@ export default function LaporanDetail() {
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-xs uppercase tracking-widest transition-all group"
+=======
+    <div className="min-h-screen bg-[#F8FAFC] selection:bg-indigo-100 selection:text-indigo-900">
+      <div className="bg-white/70 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="flex items-center gap-3 text-slate-500 hover:text-indigo-600 font-black text-xs uppercase tracking-widest transition-all group"
+>>>>>>> Stashed changes
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
             <span className="hidden sm:inline">Kembali</span>
@@ -297,12 +356,17 @@ export default function LaporanDetail() {
           </div>
 
           <div className="flex items-center gap-2">
+<<<<<<< Updated upstream
             <button
               className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
               onClick={() => navigator.share?.({ title: data.alamat, text: data.deskripsi })}
               title="Bagikan"
             >
               <Share2 size={16} />
+=======
+            <button className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" onClick={() => navigator.share && navigator.share({ title: data.alamat, text: data.deskripsi })}>
+              <Share2 size={18} />
+>>>>>>> Stashed changes
             </button>
             <span className={`hidden sm:flex text-[10px] font-black px-3 py-1.5 rounded-lg border items-center gap-1.5 ${statusCfg.badge}`}>
               {statusCfg.icon} {statusCfg.label.toUpperCase()}
@@ -311,6 +375,7 @@ export default function LaporanDetail() {
         </div>
       </header>
 
+<<<<<<< Updated upstream
       <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
 
         {/* ── HERO CARD ── */}
@@ -356,9 +421,31 @@ export default function LaporanDetail() {
                   <span className={`w-2 h-2 rounded-full ${statusCfg.dot} ${!isDone ? 'animate-pulse' : ''}`} />
                   <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{statusCfg.label}</span>
                 </div>
+=======
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
+        <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden mb-12 flex flex-col lg:flex-row min-h-[500px]">
+          <div className="lg:w-[62%] relative bg-slate-100 overflow-hidden">
+            {data.foto_url ? (
+              <img 
+                src={data.foto_url} 
+                alt="Foto kerusakan" 
+                className="w-full h-full object-cover absolute inset-0 transform hover:scale-105 transition-transform duration-1000"
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                <Camera size={80} strokeWidth={1} className="mb-4 opacity-50" />
+                <p className="text-xs font-black uppercase tracking-[0.2em]">Foto bukti tidak tersedia</p>
+              </div>
+            )}
+            <div className="absolute top-8 left-8">
+              <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-2xl border border-white/50 flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${statusCfg.dot} animate-pulse`}></div>
+                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{statusCfg.label}</span>
+>>>>>>> Stashed changes
               </div>
             </div>
 
+<<<<<<< Updated upstream
             {/* INFO PANEL */}
             <div className="lg:w-[42%] flex flex-col p-7 lg:p-9 border-t lg:border-t-0 lg:border-l border-slate-100">
               {/* title */}
@@ -369,9 +456,99 @@ export default function LaporanDetail() {
                 <p className="text-sm text-slate-500 font-medium mt-2 flex items-center gap-1.5">
                   <MapPin size={13} className="text-indigo-400 shrink-0" />
                   Kel. {data.kelurahan?.nama_kelurahan}, Kec. {data.kecamatan?.nama_kecamatan}
+=======
+          <div className="lg:w-[38%] p-10 lg:p-12 flex flex-col justify-between bg-white border-l border-slate-50">
+            <div className="space-y-8">
+              <div>
+                <span className={`text-[9px] font-black px-3 py-1.5 rounded-lg border uppercase tracking-widest mb-6 inline-block ${priorityCfg.color}`}>
+                  Prioritas {priorityCfg.label}
+                </span>
+                <h1 className="text-3xl lg:text-4xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                  {data.alamat}
+                </h1>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-start gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-50 transition-colors shrink-0">
+                    <MapPin size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Lokasi Detail</p>
+                    <p className="text-sm font-bold text-slate-700 leading-relaxed italic">
+                      Kel. {data.kelurahan?.nama_kelurahan}, Kec. {data.kecamatan?.nama_kecamatan}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-50 transition-colors shrink-0">
+                    <User size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Identitas Pelapor</p>
+                    <p className="text-sm font-bold text-slate-900">{data.profiles?.nama || 'Warga Anonim'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-50 transition-colors shrink-0">
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Waktu Pelaporan</p>
+                    <p className="text-sm font-bold text-slate-500">
+                      {new Date(data.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-slate-100">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dukungan Publik</p>
+                  <p className="text-2xl font-black text-slate-900 leading-none">{data.upvote_count || 0} <span className="text-xs text-slate-400 ml-1 font-bold">Suara</span></p>
+                </div>
+                <button
+                  onClick={handleUpvote}
+                  disabled={upvoteLoading || !user}
+                  className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${
+                    upvoted 
+                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-[0.98]' 
+                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white border border-indigo-100 hover:shadow-xl hover:shadow-indigo-100'
+                  } disabled:opacity-50`}
+                >
+                  <ThumbsUp size={16} className={upvoted ? 'fill-white' : ''} />
+                  {upvoted ? 'Didukung' : 'Dukung'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-12 mb-12">
+          <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <FileText size={120} />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                  <FileText size={22} />
+                </div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Detail Kerusakan</h2>
+              </div>
+              <div className="bg-slate-50/80 rounded-[1.5rem] p-8 border border-slate-100 relative">
+                <div className="absolute -top-3 left-8 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase tracking-tighter">Kesaksian Warga</div>
+                <p className="text-slate-700 leading-loose text-[16px] font-medium italic">
+                  "{data.deskripsi}"
+>>>>>>> Stashed changes
                 </p>
               </div>
 
+<<<<<<< Updated upstream
               {/* stats grid */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <StatCard icon={User}  label="Pelapor"         value={data.profiles?.nama || 'Anonim'}  accent="indigo" />
@@ -379,6 +556,21 @@ export default function LaporanDetail() {
                 <StatCard icon={ThumbsUp} label="Dukungan"     value={`${data.upvote_count || 0} Suara`} accent="amber" />
                 <StatCard icon={FileText} label="ID Laporan"   value={`#${id?.slice(0,8).toUpperCase()}`} accent="emerald" />
               </div>
+=======
+          {isAdmin && (
+            <div className="bg-[#0F172A] rounded-[2.5rem] shadow-2xl p-10 text-white relative overflow-hidden group">
+              <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[60%] bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-indigo-400 border border-white/10 shadow-2xl">
+                    <ShieldCheck size={28} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight">Kontrol Administrasi</h2>
+                    <p className="text-indigo-300/60 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Management Dashboard v2.0</p>
+                  </div>
+                </div>
+>>>>>>> Stashed changes
 
               {/* progress stepper */}
               <div className="bg-slate-50/80 rounded-2xl border border-slate-100 p-5 mb-6">
@@ -386,6 +578,7 @@ export default function LaporanDetail() {
                 <ProgressStepper status={data.status} />
               </div>
 
+<<<<<<< Updated upstream
               {/* upvote button */}
               <div className="mt-auto">
                 {profile?.role === 'warga' ? (
@@ -412,6 +605,44 @@ export default function LaporanDetail() {
                   <div className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-50 text-slate-400 border border-slate-100">
                     <ThumbsUp size={15} />
                     {data.upvote_count || 0} Dukungan
+=======
+                  <div className="space-y-6">
+                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                      <Inbox size={14} className="text-indigo-400" />
+                      Tindakan Lanjutan
+                    </label>
+                    <div className="space-y-3">
+                      {canModerate && data.status === 'pending' && (
+                        <div className="flex gap-3">
+                          <button onClick={() => handleUpdateStatus('verified')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-blue-900/40 transition-all active:scale-95 uppercase tracking-widest">Verifikasi</button>
+                          <button onClick={() => handleUpdateStatus('rejected')} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-red-900/40 transition-all active:scale-95 uppercase tracking-widest">Tolak</button>
+                        </div>
+                      )}
+                      {canWorkAction && data.status === 'verified' && (
+                        <button onClick={() => handleUpdateStatus('in_progress')} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-purple-900/40 transition-all uppercase tracking-widest">Mulai Perbaikan</button>
+                      )}
+                      {canWorkAction && data.status === 'in_progress' && (
+                        <button onClick={() => handleUpdateStatus('done')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-900/40 transition-all uppercase tracking-widest">Selesaikan Proyek</button>
+                      )}
+                      {canModerate && data.status !== 'pending' && (
+                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-3">
+                          <XCircle size={20} className="text-red-500 shrink-0" />
+                          <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight">Penolakan tidak tersedia setelah tahap verifikasi.</p>
+                        </div>
+                      )}
+                      {canWorkAction && ['verified','in_progress'].includes(data.status) && (
+                        <div className="pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setUploadModalOpen(true)}
+                            className="inline-flex items-center gap-2 rounded-3xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                          >
+                            <ArrowUpCircle size={18} /> Upload Bukti
+                          </button>
+                        </div>
+                      )}
+                    </div>
+>>>>>>> Stashed changes
                   </div>
                 )}
               </div>
@@ -419,6 +650,7 @@ export default function LaporanDetail() {
           </div>
         </div>
 
+<<<<<<< Updated upstream
         {/* ── TWO-COL GRID ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -443,6 +675,18 @@ export default function LaporanDetail() {
                 <p className="text-sm text-indigo-900 leading-relaxed font-medium">
                   {data.catatan}
                 </p>
+=======
+        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 mb-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -mr-32 -mt-32"></div>
+          <div className="flex items-center justify-between mb-16 relative z-10">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-100">
+                <Clock size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Timeline Progress</h2>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Audit Trail & History</p>
+>>>>>>> Stashed changes
               </div>
             )}
 
@@ -648,6 +892,7 @@ export default function LaporanDetail() {
                   const hCfg = STATUS_MAP[h.status] || STATUS_MAP.pending;
                   const isLatest = i === 0;
                   return (
+<<<<<<< Updated upstream
                     <div key={h.id} className="flex items-start gap-5 relative group pb-6 last:pb-0">
                       {/* dot */}
                       <div className={`relative z-10 w-10 h-10 rounded-full ${hCfg.dot} flex items-center justify-center shrink-0 border-3 border-white shadow-md text-white transition-transform group-hover:scale-110 ${isLatest ? 'ring-4 ring-offset-2 ring-slate-200' : ''}`}>
@@ -657,6 +902,21 @@ export default function LaporanDetail() {
                       <div className="flex-1 bg-slate-50/60 hover:bg-white p-5 rounded-2xl border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all duration-300 mb-1">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                           <span className={`text-[10px] font-black px-3 py-1 rounded-lg border w-fit ${hCfg.badge}`}>
+=======
+                    <div key={h.id} className="flex items-center gap-8 md:gap-12 relative group">
+                      {i !== 0 && (
+                        <div className="absolute top-0 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0"></div>
+                      )}
+                      {!isLast && (
+                        <div className="absolute top-1/2 left-[27px] h-1/2 w-0.5 bg-slate-100 z-0 group-hover:bg-indigo-100 transition-colors"></div>
+                      )}
+                      <div className={`relative z-10 w-14 h-14 rounded-[1.25rem] ${hCfg.dot} flex items-center justify-center shrink-0 border-4 border-white shadow-2xl transition-all duration-300 group-hover:scale-110 text-white`}>
+                        {hCfg.icon}
+                      </div>
+                      <div className="flex-1 bg-slate-50/50 hover:bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                          <span className={`text-[10px] font-black px-4 py-1.5 rounded-xl border uppercase tracking-widest w-fit ${hCfg.badge}`}>
+>>>>>>> Stashed changes
                             {hCfg.label}
                           </span>
                           <time className="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5">
@@ -684,6 +944,7 @@ export default function LaporanDetail() {
           )}
         </div>
 
+<<<<<<< Updated upstream
         {/* ── BUKTI SELESAI ── */}
         {data.bukti && (
           <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-3xl shadow-2xl p-8 lg:p-12 text-white relative overflow-hidden">
@@ -697,6 +958,20 @@ export default function LaporanDetail() {
                   <h2 className="text-3xl lg:text-4xl font-black leading-tight tracking-tight">Perbaikan Selesai</h2>
                   <p className="text-emerald-100/60 text-sm font-medium mt-2 leading-relaxed">
                     Infrastruktur telah berhasil dipulihkan. Terima kasih telah berperan aktif.
+=======
+        {(data.status === 'selesai' || data.status === 'done') && data.bukti && (
+          <div className="bg-[#064E3B] rounded-[3rem] shadow-2xl shadow-emerald-900/30 p-10 lg:p-16 mb-12 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[50%] h-full bg-emerald-500/10 blur-[120px] rounded-full"></div>
+            <div className="relative z-10 flex flex-col lg:flex-row gap-16 items-center">
+              <div className="lg:w-[45%] space-y-10">
+                <div className="space-y-6">
+                  <div className="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-300 border border-white/20 shadow-2xl">
+                    <CheckCircle2 size={40} />
+                  </div>
+                  <h2 className="text-4xl lg:text-5xl font-black leading-tight tracking-tight italic">Misi Selesai.</h2>
+                  <p className="text-emerald-100/70 text-lg font-medium leading-loose">
+                    Infrastruktur telah berhasil dipulihkan. Terima kasih telah berperan aktif dalam membangun kota yang lebih baik.
+>>>>>>> Stashed changes
                   </p>
                 </div>
                 {data.bukti.keterangan && (
@@ -727,10 +1002,28 @@ export default function LaporanDetail() {
           </div>
         )}
 
+<<<<<<< Updated upstream
         {/* ── FEEDBACK ── */}
         {isDone && profile?.role !== 'petugas' && (
           <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-8">
             <SectionHeader icon={Star} title="Penilaian Masyarakat" subtitle="Evaluasi & kepuasan layanan" accent="amber" />
+=======
+        {(data.status === 'selesai' || data.status === 'done') && (
+          <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/30 border border-slate-100 p-10 lg:p-14 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-10 text-slate-50 opacity-10">
+               <Star size={160} />
+            </div>
+            <div className="relative z-10 max-w-4xl mx-auto">
+              <div className="flex items-center gap-5 mb-14">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center text-white shadow-xl shadow-amber-100">
+                  <Star size={28} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Suara Masyarakat</h2>
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Evaluasi & Kepuasan Layanan</p>
+                </div>
+              </div>
+>>>>>>> Stashed changes
 
             {data.feedback && data.feedback.length > 0 && (
               <>
@@ -774,12 +1067,23 @@ export default function LaporanDetail() {
                     </div>
                   ))}
                 </div>
+<<<<<<< Updated upstream
               </>
             )}
 
             {(!data.feedback || data.feedback.length === 0) && (profile?.role === 'kecamatan' || profile?.role === 'super_admin') && (
               <div className="text-center py-6 text-slate-500 text-sm italic">
                 Belum ada penilaian dari pelapor.
+=======
+              )}
+              <div className="bg-gradient-to-br from-indigo-50/50 to-white p-10 rounded-[2.5rem] border border-indigo-100/50 shadow-inner">
+                <FeedbackForm
+                  laporanId={data.id}
+                  onSubmitted={loadData}
+                  currentUserId={user?.id}
+                  canSubmit={canSubmitFeedback}
+                />
+>>>>>>> Stashed changes
               </div>
             )}
 
@@ -796,6 +1100,7 @@ export default function LaporanDetail() {
           </div>
         )}
 
+<<<<<<< Updated upstream
       </main>
 
       {/* ── MODALS ── */}
@@ -845,6 +1150,17 @@ export default function LaporanDetail() {
           onClose={() => setAlertModal({ ...alertModal, open: false })}
         />
       )}
+=======
+        <UploadBuktiModal
+          open={uploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          onSubmit={handleUploadSubmit}
+          loading={actionLoading}
+          errorMessage={uploadError}
+          successMessage={uploadSuccess}
+        />
+      </div>
+>>>>>>> Stashed changes
     </div>
   );
 }

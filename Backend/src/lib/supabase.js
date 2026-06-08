@@ -1,3 +1,7 @@
+<<<<<<< Updated upstream
+=======
+import 'dotenv/config';
+>>>>>>> Stashed changes
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 
