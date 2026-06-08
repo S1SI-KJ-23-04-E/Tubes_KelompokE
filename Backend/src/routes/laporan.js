@@ -57,22 +57,56 @@ router.get('/', async (req, res) => {
 
 // GET /api/laporan/:id — Detail laporan
 router.get('/:id', async (req, res) => {
-  const { data, error } = await supabaseAdmin
-    .from('laporan')
-    .select(`
-      *,
-      kecamatan:kecamatan_id(id, nama_kecamatan),
-      kelurahan:kelurahan_id(id, nama_kelurahan),
-      profiles:pelapor_id(id, nama),
-      history_laporan(*),
-      bukti_selesai(*),
-      feedback(*)
-    `)
-    .eq('id', req.params.id)
-    .single();
+  try {
+    const laporanId = req.params.id;
 
-  if (error) return res.status(404).json({ success: false, error: error.message, data: null });
-  res.json({ success: true, data });
+    // Ambil laporan dasar (tanpa history)
+    const { data: laporan, error: laporanError } = await supabaseAdmin
+      .from('laporan')
+      .select(`
+        *,
+        kecamatan:kecamatan_id(id, nama_kecamatan),
+        kelurahan:kelurahan_id(id, nama_kelurahan),
+        profiles:pelapor_id(id, nama),
+        bukti_selesai(*),
+        feedback(*)
+      `)
+      .eq('id', laporanId)
+      .single();
+
+    if (laporanError) return res.status(404).json({ success: false, error: laporanError.message, data: null });
+
+    // Default: jangan sertakan history
+    laporan.history = [];
+
+    // Jika ada token/user, cek role — hanya `kecamatan` atau `super_admin` boleh melihat history
+    const authHeader = req.headers.authorization?.replace('Bearer ', '');
+    if (authHeader) {
+      const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(authHeader);
+      if (!userErr && user) {
+        const { data: profile, error: profileErr } = await supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const role = profile?.role || null;
+        if (role === 'kecamatan' || role === 'super_admin') {
+          const { data: history } = await supabaseAdmin
+            .from('history_laporan')
+            .select('*')
+            .eq('laporan_id', laporanId)
+            .order('created_at', { ascending: true });
+
+          laporan.history = history || [];
+        }
+      }
+    }
+
+    res.json({ success: true, data: laporan });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message, data: null });
+  }
 });
 
 // DELETE /api/laporan/:id — Hapus laporan (hanya pending milik sendiri)
