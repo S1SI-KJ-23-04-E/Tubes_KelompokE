@@ -26,7 +26,6 @@ const STEPS = [
 
 function StepIndicator({ current }) {
   return (
-<<<<<<< Updated upstream
     <div className="flex items-center w-full mb-10">
       {STEPS.map((step, i) => {
         const Icon   = step.icon;
@@ -41,112 +40,6 @@ function StepIndicator({ current }) {
                          'bg-slate-50 border-slate-200 text-slate-300'
               }`}>
                 {done ? <CheckCircle2 size={18} /> : <Icon size={16} />}
-=======
-    <div className="max-w-4xl mx-auto p-4 md:p-8 pt-8 animate-fade-in">
-      {/* Back button */}
-      <button 
-        onClick={() => navigate(-1)} 
-        className="flex items-center text-[#1e3a8a] hover:text-blue-800 font-semibold mb-6 transition-all hover:translate-x-1 text-sm animate-fade-in-up group"
-      >
-        <ArrowLeft size={16} className="mr-2 transition-transform group-hover:-translate-x-1" />
-        Kembali ke Dashboard
-      </button>
-
-      {/* Main Card */}
-      <div className="bg-white rounded-lg shadow-lg border border-slate-100 overflow-hidden animate-scale-in hover:shadow-xl transition-shadow duration-300">
-        <form onSubmit={handleSubmit} className="p-8 md:p-10">
-          <div className="mb-8 border-b border-slate-100 pb-6">
-            <h1 className="text-2xl font-bold text-[#1e3a8a] mb-2">Formulir Laporan Kerusakan</h1>
-            <p className="text-slate-500 text-sm">Lengkapi informasi berikut untuk membuat laporan kerusakan infrastruktur</p>
-            <p className="text-xs text-slate-500 mt-2">Field dengan tanda <span className="text-red-500">*</span> wajib diisi.</p>
-          </div>
-
-          <div className="space-y-6">
-            {/* Alamat */}
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Alamat Lokasi <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                required
-                placeholder="Contoh: Jl. Sudirman No. 123"
-                className="w-full bg-[#f8fafc] border border-slate-200 text-slate-700 rounded-md block p-3 text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/30 transition-all input-focus-animate focus:shadow-md hover:border-slate-300"
-                value={formData.alamat}
-                onChange={e => setFormData(prev => ({ ...prev, alamat: e.target.value }))}
-              />
-            </div>
-
-            {/* Kecamatan & Kelurahan */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Kecamatan <span className="text-red-500">*</span></label>
-                <Select 
-                  options={kecamatans}
-                  placeholder="Pilih Kecamatan"
-                  isClearable
-                  isSearchable
-                  filterOption={customFilter}
-                  styles={customStyles}
-                  onChange={handleKecamatanChange}
-                  value={kecamatans.find(k => k.value === formData.kecamatan_id) || null}
-                  className="transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Kelurahan <span className="text-red-500">*</span></label>
-                <Select 
-                  options={kelurahans}
-                  placeholder="Pilih Kelurahan Dulu"
-                  isDisabled={!formData.kecamatan_id}
-                  isClearable
-                  isSearchable
-                  filterOption={customFilter}
-                  styles={customStyles}
-                  onChange={handleKelurahanChange}
-                  value={kelurahans.find(k => k.value === formData.kelurahan_id) || null}
-                  className="transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Deskripsi */}
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Kerusakan <span className="text-red-500">*</span></label>
-              <textarea 
-                required
-                maxLength={500}
-                rows={4}
-                placeholder="Jelaskan detail kerusakan yang Anda temukan..."
-                className="w-full bg-[#f8fafc] border border-slate-200 text-slate-700 rounded-md block p-3 text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/30 transition-all input-focus-animate focus:shadow-md resize-none hover:border-slate-300"
-                value={formData.deskripsi}
-                onChange={e => setFormData(prev => ({ ...prev, deskripsi: e.target.value }))}
-              />
-            </div>
-
-            {/* Foto */}
-            <div className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Bukti Foto</label>
-              <div className="flex items-start justify-start w-full">
-                  <label className="flex flex-col items-center justify-center w-full sm:w-72 h-44 border border-slate-200 border-dashed rounded-md cursor-pointer bg-[#f8fafc] hover:bg-slate-100 transition-all overflow-hidden relative group card-hover">
-                      {preview ? (
-                        <>
-                          <img src={preview} alt="Preview" className="w-full h-full object-cover bg-slate-900/5 group-hover:opacity-50 transition-opacity duration-300" />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="bg-slate-900/80 text-white px-4 py-2 rounded text-sm flex items-center gap-2 animate-scale-in">
-                              <Upload size={14} /> Ganti Foto
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4 transition-all group-hover:scale-105">
-                            <ImageIcon size={28} className="text-slate-400 mb-2 transition-colors group-hover:text-slate-600 group-hover:animate-bounce" />
-                            <p className="mb-1 text-sm text-slate-500 font-medium transition-colors">Klik untuk upload foto</p>
-                            <p className="text-xs text-slate-400 transition-colors">Format: JPG, PNG (Max 5MB)</p>
-                        </div>
-                      )}
-                      <input type="file" className="hidden" accept="image/*" onChange={handleFotoChange} />
-                  </label>
->>>>>>> Stashed changes
               </div>
               <span className={`text-[9px] font-black uppercase tracking-wider hidden sm:block ${
                 active ? 'text-indigo-600' : done ? 'text-slate-500' : 'text-slate-300'

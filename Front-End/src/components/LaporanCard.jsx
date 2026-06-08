@@ -102,7 +102,6 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
           <span className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${statusColors[safeStatus] || 'bg-gray-100'} status-breathing`}>
             {safeStatus.replace('_', ' ').toUpperCase()}
           </span>
-<<<<<<< Updated upstream
           <div className="flex items-center gap-2">
             {isInternalRole && ['pending', 'verified', 'in_progress'].includes(safeStatus) && (
               <button
@@ -115,9 +114,6 @@ export default function LaporanCard({ laporan: initialLaporan, onDelete, minimal
             )}
             <span className="text-xs text-gray-400 transition-all group-hover:text-indigo-400">{dateLabel}</span>
           </div>
-=======
-          <span className="text-xs text-gray-400">{dateLabel}</span>
->>>>>>> Stashed changes
         </div>
       )}
       

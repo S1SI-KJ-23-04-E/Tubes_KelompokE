@@ -292,9 +292,6 @@ export async function getAllLaporan(excludeUserId = null) {
 export async function updateLaporanStatus(id, newStatus, fileBukti = null, keterangan = '') {
   try {
     const userId = await getCurrentUserId();
-<<<<<<< Updated upstream
-
-=======
     const profile = await getCurrentUserProfile();
     const laporanKecamatanId = await getLaporanKecamatanId(id);
     const normalizedStatus = newStatus === 'selesai' ? 'done' : newStatus;
@@ -306,8 +303,6 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     if (!canManage) {
       throw new Error('Anda hanya bisa memperbarui laporan di kecamatan Anda sendiri.');
     }
-    
->>>>>>> Stashed changes
     // 1. Update status in laporan table
     const { error: updateError } = await supabase
       .from('laporan')
@@ -327,13 +322,8 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     ]);
     if (historyErr) console.warn('History insert warning:', historyErr.message);
 
-<<<<<<< Updated upstream
-    // 3. Handle bukti selesai if a file is provided
-    if (fileBukti) {
-=======
     // 3. Handle bukti selesai if status is done and a file is provided
     if (normalizedStatus === 'done' && fileBukti) {
->>>>>>> Stashed changes
       const fileExt = fileBukti.name.split('.').pop();
       const fileName = `bukti_${id}_${Math.random()}.${fileExt}`;
       const filePath = `bukti/${fileName}`;
@@ -363,7 +353,6 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
     console.error('Error updating status:', error);
     return { success: false, error: error.message };
   }
-<<<<<<< Updated upstream
 }
 
 export async function updateCatatanLaporan(id, catatan) {
@@ -389,8 +378,6 @@ export async function updateCatatanLaporan(id, catatan) {
     console.error('Error in updateCatatanLaporan:', error);
     return { success: false, error: error.message };
   }
-=======
->>>>>>> Stashed changes
 }
 
 export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
@@ -402,17 +389,6 @@ export async function tolakLaporan(id, keterangan = '') {
 }
 
 export const createKendala = async (laporan_id, deskripsi) => {
-<<<<<<< Updated upstream
-=======
-  const { data, error } = await supabase
-    .from('kendala_laporan')
-    .insert([{ laporan_id, deskripsi }]);
-
-  return { data, error };
-};
-
-export async function upvoteLaporan(laporanId) {
->>>>>>> Stashed changes
   try {
     const userId = await getCurrentUserId();
 
@@ -432,7 +408,6 @@ export async function upvoteLaporan(laporanId) {
     console.error('Error creating kendala:', error);
     return { success: false, error: error.message };
   }
-<<<<<<< Updated upstream
 };
 
 export async function getKendalaByKecamatan(kecamatanId) {
@@ -584,6 +559,3 @@ export async function mergeLaporan(primaryId, secondaryIds) {
     return { success: false, error: error.message };
   }
 }
-=======
-}
->>>>>>> Stashed changes

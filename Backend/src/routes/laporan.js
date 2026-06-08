@@ -6,7 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/laporan — Buat laporan baru
+// POST /api/laporan ï¿½ Buat laporan baru
 router.post('/', authenticate, async (req, res) => {
   const { judul, kecamatan_id, kelurahan_id, deskripsi, alamat, foto_url, latitude, longitude } = req.body;
   const userId = req.user.id;
@@ -34,7 +34,7 @@ router.post('/', authenticate, async (req, res) => {
   res.json({ success: true, data: [laporan] });
 });
 
-// GET /api/laporan/user — Laporan milik user yang login
+// GET /api/laporan/user ï¿½ Laporan milik user yang login
 router.get('/user', authenticate, async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -46,7 +46,7 @@ router.get('/user', authenticate, async (req, res) => {
   res.json({ success: true, data });
 });
 
-// GET /api/laporan — Semua laporan (public feed)
+// GET /api/laporan ï¿½ Semua laporan (public feed)
 router.get('/', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -62,7 +62,7 @@ router.get('/', async (req, res) => {
   res.json({ success: true, data: data || [] });
 });
 
-// GET /api/laporan/:id — Detail laporan
+// GET /api/laporan/:id ï¿½ Detail laporan
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('laporan')
@@ -82,7 +82,7 @@ router.get('/:id', async (req, res) => {
   res.json({ success: true, data });
 });
 
-// DELETE /api/laporan/:id — Hapus laporan (hanya pending milik sendiri)
+// DELETE /api/laporan/:id ï¿½ Hapus laporan (hanya pending milik sendiri)
 router.delete('/:id', authenticate, async (req, res) => {
   const { error } = await supabaseAdmin
     .from('laporan')
@@ -95,11 +95,7 @@ router.delete('/:id', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-<<<<<<< Updated upstream
-
-// POST /api/laporan/:id/selesai â€” Upload bukti & set selesai (ADMIN/PETUGAS)
-=======
-// POST /api/laporan/:id/upvote — Upvote laporan
+// POST /api/laporan/:id/upvote ï¿½ Upvote laporan
 router.post('/:id/upvote', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
@@ -169,7 +165,7 @@ router.post('/:id/upvote', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/laporan/:id/user-upvoted — Check apakah user sudah upvote laporan ini
+// GET /api/laporan/:id/user-upvoted ï¿½ Check apakah user sudah upvote laporan ini
 router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   const laporanId = req.params.id;
   const userId = req.user.id;
@@ -192,8 +188,7 @@ router.get('/:id/user-upvoted', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/laporan/:id/selesai — Upload bukti & set selesai (ADMIN/PETUGAS)
->>>>>>> Stashed changes
+// POST /api/laporan/:id/selesai ï¿½ Upload bukti & set selesai (ADMIN/PETUGAS)
 router.post('/:id/selesai', authenticate, upload.single('foto'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -345,7 +340,3 @@ router.get('/:id/upvote/check', authenticate, async (req, res) => {
 });
 
 export default router;
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
