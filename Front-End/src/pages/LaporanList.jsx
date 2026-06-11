@@ -44,6 +44,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
+import {getAllKendala} from '../services/laporanService';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -246,15 +247,20 @@ export default function LaporanList() {
           if (!json?.success) throw new Error(json?.error ?? 'Admin API tidak mengembalikan success=true');
           setLaporanMasuk(json.data ?? []);
 
-          if (kecamatanId) {
-            const kendalaRes = await getKendalaByKecamatan(kecamatanId);
-            if (kendalaRes.success) {
-              const activeKendala = kendalaRes.data.filter(
-                (k) => k.laporan?.status !== 'done' && k.laporan?.status !== 'selesai'
-              );
-              setKendalaList(activeKendala);
-            }
-          }
+        if (kecamatanId) {
+        const kendalaRes = await getKendalaByKecamatan(kecamatanId);
+        if (kendalaRes.success) {
+          const activeKendala = kendalaRes.data.filter(
+            (k) => k.laporan?.status !== 'done' && k.laporan?.status !== 'selesai'
+          );
+          setKendalaList(activeKendala);
+        }
+
+        } else if (profile?.role === 'super_admin') {
+          const kendalaRes = await getAllKendala();
+          if (kendalaRes.success) setKendalaList(kendalaRes.data);
+        }
+
         } catch {
           const fallbackRes = await getAllLaporan();
           if (fallbackRes.success) {
@@ -272,7 +278,11 @@ export default function LaporanList() {
                 );
                 setKendalaList(activeKendala);
               }
+            } else if (profile?.role === 'super_admin') {
+              const kendalaRes = await getAllKendala();
+              if (kendalaRes.success) setKendalaList(kendalaRes.data);
             }
+
           } else {
             setLaporanMasuk([]);
           }
@@ -749,8 +759,8 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, onCatatan, profil
           const itemKecamatanId = item.kecamatan_id     ?? item.kecamatan?.id;
           const sameKecamatan   = String(userKecamatanId ?? '') === String(itemKecamatanId ?? '');
 
-          const canModerateItem   = profile?.role === 'super_admin' || (profile?.role === 'kecamatan' && sameKecamatan);
-          const canWorkAction     = profile?.role === 'super_admin' || (sameKecamatan && profile?.role === 'petugas');
+          const canModerateItem = profile?.role === 'kecamatan' && sameKecamatan;
+          const canWorkAction = profile?.role === 'petugas' && sameKecamatan;
           const canChangePriority = showPriority && profile?.role === 'kecamatan' && sameKecamatan;
 
           const cfg        = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.pending;

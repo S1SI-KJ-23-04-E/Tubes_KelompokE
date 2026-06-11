@@ -605,3 +605,27 @@ export async function mergeLaporan(primaryId, secondaryIds) {
     return { success: false, error: error.message };
   }
 }
+
+export async function getAllKendala() {
+  try {
+    const { data, error } = await supabase
+      .from('kendala_laporan')
+      .select(`
+        *,
+        laporan!inner (
+          id, kecamatan_id, judul, deskripsi, alamat, status
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const active = (data ?? []).filter(
+      (k) => k.laporan?.status !== 'done' && k.laporan?.status !== 'selesai'
+    );
+    return { success: true, data: active };
+  } catch (error) {
+    console.error('Error get all kendala:', error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
