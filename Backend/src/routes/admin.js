@@ -295,7 +295,6 @@ router.put('/laporan/:id/status', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-<<<<<<< Updated upstream
 // POST /api/admin/laporan/:id/kendala
 router.post('/laporan/:id/kendala', authenticate, async (req, res) => {
   const { deskripsi } = req.body;
@@ -314,9 +313,6 @@ router.post('/laporan/:id/kendala', authenticate, async (req, res) => {
   if (error) return res.status(500).json({ success: false, error: error.message });
   res.json({ success: true });
 });
-
-=======
->>>>>>> Stashed changes
 // GET /api/admin/laporan/semua
 router.get('/laporan/semua', authenticate, async (req, res) => {
   const { search } = req.query;

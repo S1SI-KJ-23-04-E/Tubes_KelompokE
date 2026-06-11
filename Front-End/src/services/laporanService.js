@@ -8,18 +8,23 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api'
 
 /** Ambil user ID dari session lokal — tanpa network call */
 async function getCurrentUserId() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   if (!session?.user) throw new Error('Anda belum login.');
   return session.user.id;
 }
 
 async function getCurrentUserProfile() {
   const userId = await getCurrentUserId();
+
   const { data, error } = await supabase
     .from('profiles')
     .select('id, role, kecamatan_id, kecamatan: kecamatan(id)')
     .eq('id', userId)
     .maybeSingle();
+
   if (error) throw error;
   return data;
 }
@@ -30,6 +35,7 @@ async function getLaporanKecamatanId(id) {
     .select('id, kecamatan_id')
     .eq('id', id)
     .maybeSingle();
+
   if (error) throw error;
   if (!data) throw new Error('Laporan tidak ditemukan.');
   return data.kecamatan_id;
@@ -45,30 +51,36 @@ export async function createLaporan(data) {
 
     const { data: result, error } = await supabase
       .from('laporan')
-      .insert([{
-        pelapor_id:   userId,
-        judul:        data.judul,
-        kecamatan_id: data.kecamatan_id,
-        kelurahan_id: data.kelurahan_id,
-        deskripsi:    data.deskripsi,
-        alamat:       data.alamat,
-        foto_url:     data.foto_url,
-        latitude:     data.latitude  || null,
-        longitude:    data.longitude || null,
-        status:       'pending',
-      }])
+      .insert([
+        {
+          pelapor_id:   userId,
+          judul:        data.judul,
+          kecamatan_id: data.kecamatan_id,
+          kelurahan_id: data.kelurahan_id,
+          deskripsi:    data.deskripsi,
+          alamat:       data.alamat,
+          foto_url:     data.foto_url,
+          latitude:     data.latitude  ?? null,
+          longitude:    data.longitude ?? null,
+          status:       'pending',
+        },
+      ])
       .select();
 
     if (error) throw error;
 
-    // Catat ke history_laporan
     if (result?.length > 0) {
-      const { error: hErr } = await supabase.from('history_laporan').insert([{
-        laporan_id: result[0].id,
-        status:     'pending',
-        changed_by: userId,
-      }]);
-      if (hErr) console.warn('History insert warning:', hErr.message);
+      const { error: historyError } = await supabase
+        .from('history_laporan')
+        .insert([
+          {
+            laporan_id: result[0].id,
+            status:     'pending',
+            changed_by: userId,
+          },
+        ]);
+
+      if (historyError) console.warn('History insert warning:', historyError.message);
     }
 
     return { success: true, data: result };
@@ -93,7 +105,7 @@ export async function getLaporanByUser() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true, data: data || [] };
+    return { success: true, data: data ?? [] };
   } catch (error) {
     console.error('Error getting laporan by user:', error);
     return { success: false, error: error.message, data: [] };
@@ -117,44 +129,41 @@ export async function getLaporanById(id) {
 
     if (error) throw error;
 
-    // Normalisasi feedback
-    data.feedback = Array.isArray(data.feedback)
-      ? data.feedback
-      : data.feedback ? [data.feedback] : [];
-
     // History
-    let history = [];
-    const { data: hData, error: hErr } = await supabase
+    const { data: historyData, error: historyError } = await supabase
       .from('history_laporan')
       .select('*')
       .eq('laporan_id', id)
       .order('created_at', { ascending: true });
-    if (!hErr) history = hData || [];
-    else console.warn('history_laporan fetch warning:', hErr.message);
+
+    if (historyError) console.warn('history_laporan fetch warning:', historyError.message);
 
     // Bukti selesai
-    let bukti = null;
-    const { data: bData, error: bErr } = await supabase
+    const { data: buktiData, error: buktiError } = await supabase
       .from('bukti_selesai')
       .select('*')
       .eq('laporan_id', id)
       .maybeSingle();
-    if (!bErr) bukti = bData || null;
-    else console.warn('bukti_selesai fetch warning:', bErr.message);
 
-    // Feedback (fresh fetch — override dari select di atas)
-    let feedback = [];
-    const { data: fData, error: fErr } = await supabase
+    if (buktiError) console.warn('bukti_selesai fetch warning:', buktiError.message);
+
+    // Feedback — fresh fetch override dari select di atas
+    const { data: feedbackData, error: feedbackError } = await supabase
       .from('feedback')
       .select('*')
       .eq('laporan_id', id)
       .order('created_at', { ascending: false });
-    if (!fErr) feedback = fData || [];
-    else console.warn('feedback fetch warning:', fErr.message);
+
+    if (feedbackError) console.warn('feedback fetch warning:', feedbackError.message);
 
     return {
       success: true,
-      data: { ...data, history, bukti, feedback },
+      data: {
+        ...data,
+        history:  historyData  ?? [],
+        bukti:    buktiData    ?? null,
+        feedback: feedbackData ?? [],
+      },
     };
   } catch (error) {
     console.error('Error getting laporan detail:', error);
@@ -191,8 +200,9 @@ export async function getKecamatan() {
       .from('kecamatan')
       .select('*')
       .order('nama_kecamatan');
+
     if (error) throw error;
-    return data || [];
+    return data ?? [];
   } catch (error) {
     console.error('Error fetching kecamatan:', error);
     return [];
@@ -201,14 +211,16 @@ export async function getKecamatan() {
 
 export async function getKelurahan(kecamatanId) {
   if (!kecamatanId) return [];
+
   try {
     const { data, error } = await supabase
       .from('kelurahan')
       .select('*')
       .eq('kecamatan_id', kecamatanId)
       .order('nama_kelurahan');
+
     if (error) throw error;
-    return data || [];
+    return data ?? [];
   } catch (error) {
     console.error('Error fetching kelurahan:', error);
     return [];
@@ -221,14 +233,16 @@ export async function getKelurahan(kecamatanId) {
 
 export async function uploadFoto(file) {
   if (!file) return null;
+
   try {
-    const userId = await getCurrentUserId();
+    const userId  = await getCurrentUserId();
     const fileExt = file.name.split('.').pop();
     const filePath = `${userId}/${Math.random()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('laporan-photos')
       .upload(filePath, file);
+
     if (uploadError) throw uploadError;
 
     const { data } = supabase.storage
@@ -261,7 +275,7 @@ export async function getLaporanByKecamatan(kecamatanId) {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true, data: data || [] };
+    return { success: true, data: data ?? [] };
   } catch (error) {
     console.error('Error getting laporan by kecamatan:', error);
     return { success: false, error: error.message, data: [] };
@@ -287,31 +301,27 @@ export async function getAllLaporan(excludeUserId = null) {
 
     const { data, error } = await query;
     if (error) throw error;
-    return { success: true, data: data || [] };
+    return { success: true, data: data ?? [] };
   } catch (error) {
     console.error('Error getting all laporan:', error);
     return { success: false, error: error.message, data: [] };
   }
 }
 
-/**
- * Update status laporan beserta opsional upload bukti selesai.
- *
- * BUGFIX: versi sebelumnya memiliki `if (fileBukti) {` tanpa penutup `}`
- * sehingga fungsi tidak dapat di-parse dengan benar.
- */
 export async function updateLaporanStatus(id, newStatus, fileBukti = null, keterangan = '') {
   try {
-    const userId           = await getCurrentUserId();
-    const profile          = await getCurrentUserProfile();
+    const userId             = await getCurrentUserId();
+    const profile            = await getCurrentUserProfile();
     const laporanKecamatanId = await getLaporanKecamatanId(id);
-    const normalizedStatus = newStatus === 'selesai' ? 'done' : newStatus;
+    const normalizedStatus   = newStatus === 'selesai' ? 'done' : newStatus;
 
     const isSuperAdmin  = profile?.role === 'super_admin';
-    const sameKecamatan = String(profile?.kecamatan_id || profile?.kecamatan?.id || '')
-                       === String(laporanKecamatanId || '');
-    const canManage = isSuperAdmin
-      || ((profile?.role === 'kecamatan' || profile?.role === 'petugas') && sameKecamatan);
+    const sameKecamatan =
+      String(profile?.kecamatan_id ?? profile?.kecamatan?.id ?? '') ===
+      String(laporanKecamatanId ?? '');
+    const isKecamatanOrPetugas =
+      profile?.role === 'kecamatan' || profile?.role === 'petugas';
+    const canManage = isSuperAdmin || (isKecamatanOrPetugas && sameKecamatan);
 
     if (!canManage) {
       throw new Error('Anda hanya bisa memperbarui laporan di kecamatan Anda sendiri.');
@@ -322,16 +332,22 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
       .from('laporan')
       .update({ status: normalizedStatus })
       .eq('id', id);
+
     if (updateError) throw updateError;
 
     // 2. Catat ke history
-    const { error: historyErr } = await supabase.from('history_laporan').insert([{
-      laporan_id: id,
-      status:     normalizedStatus,
-      changed_by: userId,
-      catatan:    keterangan,
-    }]);
-    if (historyErr) console.warn('History insert warning:', historyErr.message);
+    const { error: historyError } = await supabase
+      .from('history_laporan')
+      .insert([
+        {
+          laporan_id: id,
+          status:     normalizedStatus,
+          changed_by: userId,
+          catatan:    keterangan,
+        },
+      ]);
+
+    if (historyError) console.warn('History insert warning:', historyError.message);
 
     // 3. Upload bukti selesai (hanya jika status done dan ada file)
     if (normalizedStatus === 'done' && fileBukti) {
@@ -341,19 +357,25 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
       const { error: uploadError } = await supabase.storage
         .from('laporan-photos')
         .upload(filePath, fileBukti);
+
       if (uploadError) throw uploadError;
 
       const { data: publicUrlData } = supabase.storage
         .from('laporan-photos')
         .getPublicUrl(filePath);
 
-      const { error: buktiErr } = await supabase.from('bukti_selesai').insert([{
-        laporan_id:  id,
-        url_foto:    publicUrlData.publicUrl,
-        keterangan:  keterangan,
-        uploaded_by: userId,
-      }]);
-      if (buktiErr) console.warn('Bukti selesai insert warning:', buktiErr.message);
+      const { error: buktiError } = await supabase
+        .from('bukti_selesai')
+        .insert([
+          {
+            laporan_id:  id,
+            url_foto:    publicUrlData.publicUrl,
+            keterangan:  keterangan,
+            uploaded_by: userId,
+          },
+        ]);
+
+      if (buktiError) console.warn('Bukti selesai insert warning:', buktiError.message);
     }
 
     return { success: true };
@@ -365,7 +387,10 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
 
 export async function updateCatatanLaporan(id, catatan) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) throw new Error('Anda belum login.');
 
     const res = await fetch(`${API_URL}/admin/laporan/${id}/catatan`, {
@@ -386,12 +411,12 @@ export async function updateCatatanLaporan(id, catatan) {
   }
 }
 
-/** Convenience wrapper */
+/** Convenience wrapper — selesaikan laporan dengan bukti opsional */
 export async function selesaiLaporan(id, fileBukti = null, keterangan = '') {
   return updateLaporanStatus(id, 'done', fileBukti, keterangan);
 }
 
-/** Convenience wrapper */
+/** Convenience wrapper — tolak laporan dengan keterangan opsional */
 export async function tolakLaporan(id, keterangan = '') {
   return updateLaporanStatus(id, 'rejected', null, keterangan);
 }
@@ -400,17 +425,19 @@ export async function tolakLaporan(id, keterangan = '') {
 // KENDALA LAPANGAN
 // ─────────────────────────────────────────
 
-export const createKendala = async (laporan_id, deskripsi) => {
+export async function createKendala(laporan_id, deskripsi) {
   try {
     const userId = await getCurrentUserId();
 
     const { data, error } = await supabase
       .from('kendala_laporan')
-      .insert([{
-        laporan_id,
-        deskripsi,
-        petugas_id: userId,
-      }])
+      .insert([
+        {
+          laporan_id,
+          deskripsi,
+          petugas_id: userId,
+        },
+      ])
       .select();
 
     if (error) throw error;
@@ -419,7 +446,7 @@ export const createKendala = async (laporan_id, deskripsi) => {
     console.error('Error creating kendala:', error);
     return { success: false, error: error.message };
   }
-};
+}
 
 export async function getKendalaByKecamatan(kecamatanId) {
   try {
@@ -440,7 +467,7 @@ export async function getKendalaByKecamatan(kecamatanId) {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true, data: data || [] };
+    return { success: true, data: data ?? [] };
   } catch (error) {
     console.error('Error get kendala kecamatan:', error);
     return { success: false, error: error.message, data: [] };
@@ -453,7 +480,10 @@ export async function getKendalaByKecamatan(kecamatanId) {
 
 export async function checkUserUpvoted(laporanId) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) return { success: true, upvoted: false };
 
     const res = await fetch(`${API_URL}/laporan/${laporanId}/upvote/check`, {
@@ -474,7 +504,10 @@ export async function checkUserUpvoted(laporanId) {
 
 export async function upvoteLaporan(laporanId) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) throw new Error('Silakan login terlebih dahulu untuk memberikan dukungan.');
 
     const res = await fetch(`${API_URL}/laporan/${laporanId}/upvote`, {
@@ -505,7 +538,10 @@ export async function upvoteLaporan(laporanId) {
  */
 export async function getDuplicateGroups(kecamatanId, radius = 50) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) throw new Error('Anda belum login.');
 
     const res = await fetch(
@@ -518,9 +554,9 @@ export async function getDuplicateGroups(kecamatanId, radius = 50) {
 
     return {
       success:      true,
-      data:         json.data        || [],
-      total_groups: json.total_groups || 0,
-      total_pairs:  json.total_pairs  || 0,
+      data:         json.data         ?? [],
+      total_groups: json.total_groups ?? 0,
+      total_pairs:  json.total_pairs  ?? 0,
       radius:       json.radius,
     };
   } catch (error) {
@@ -536,7 +572,10 @@ export async function getDuplicateGroups(kecamatanId, radius = 50) {
  */
 export async function mergeLaporan(primaryId, secondaryIds) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) throw new Error('Anda belum login.');
 
     const res = await fetch(`${API_URL}/admin/duplicate/merge`, {

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import FeedbackForm from '../components/FeedbackForm';
 import UploadBuktiModal from '../components/UploadBuktiModal';
 import KendalaForm from '../components/KendalaForm';
-import { createNotifikasi } from '../services/notifikasiService';
+import { createPeringatan } from '../services/notifikasiService';
 import {
   ArrowLeft, Clock, MapPin, CheckCircle2, User,
   ThumbsUp, AlertTriangle, FileText, Camera, Star,
@@ -233,27 +233,27 @@ export default function LaporanDetail() {
     if (success) { setKendalaModalOpen(false); loadData(); }
     else alert('Gagal mengirim kendala: ' + (error || 'Error tidak diketahui'));
   };
- const handleKirimReminder = async () => {
+ 
+  // BARU
+const handleKirimReminder = async () => {
   const pesanReminder = prompt(
-    'Tulis pesan reminder untuk petugas:',
-    `Laporan "${data.deskripsi}" diminta untuk segera ditindaklanjuti.`
+    'Tulis pesan peringatan untuk petugas:',
+    `Laporan "${data.judul || data.alamat}" diminta untuk segera ditindaklanjuti.`
   );
 
   if (!pesanReminder) return;
 
   try {
-    await createNotifikasi({
-      laporan_id: data.id,
-      pengirim_id: user.id,
-      penerima_role: 'petugas',
-      judul: 'Peringatan',
-      pesan: pesanReminder
+    await createPeringatan({
+      laporanId:        data.id,
+      pesanPeringatan:  pesanReminder,
+      adminId:          user.id,
     });
 
-    alert('Notifikasi berhasil dikirim');
+    alert('Peringatan berhasil dikirim ke petugas');
   } catch (err) {
     console.error(err);
-    alert('Gagal mengirim notifikasi');
+    alert('Gagal mengirim peringatan');
   }
 };
 
