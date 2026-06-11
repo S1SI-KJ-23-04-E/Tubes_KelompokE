@@ -74,17 +74,32 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-50 flex items-center justify-center px-4 relative overflow-hidden">
       <BackgroundDecor />
 
       {/* floating accent blobs */}
       <div className="absolute top-[-10%] left-[-8%] w-72 h-72 rounded-full bg-indigo-100/50 blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-8%] right-[-5%] w-80 h-80 rounded-full bg-blue-100/40 blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-5xl flex items-stretch gap-0 shadow-2xl shadow-slate-300/40 rounded-[2rem] overflow-hidden">
+      <div
+  className="
+  relative z-10
+  w-full
+  max-w-6xl
+  flex
+  items-stretch
+  rounded-[40px]
+  overflow-hidden
+  border
+  border-white/60
+  bg-white/70
+  backdrop-blur-xl
+  shadow-[0_25px_80px_rgba(15,23,42,0.15)]
+"
+>
 
         {/* ── LEFT PANEL ── */}
-        <div className="hidden lg:flex lg:w-[46%] flex-col justify-between bg-[#1e3a8a] p-10 relative overflow-hidden">
+        <div className="hidden lg:flex lg:w-[46%] flex-col justify-between bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-500 p-10 relative overflow-hidden">
           {/* inner decor */}
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -mr-20 -mt-20" />
           <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-indigo-500/20 -ml-16 -mb-16" />
@@ -119,6 +134,17 @@ export default function Login() {
             <p className="text-indigo-200/60 text-sm font-medium leading-relaxed max-w-xs">
               Platform pelaporan kerusakan infrastruktur yang transparan dan dapat dipantau secara real-time.
             </p>
+            <div className="grid grid-cols-2 gap-3 mt-8">
+              <div className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-4">
+                <p className="text-2xl font-black text-white">24/7</p>
+                <p className="text-xs text-indigo-100">Monitoring</p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-4">
+                <p className="text-2xl font-black text-white">Real-Time</p>
+                <p className="text-xs text-indigo-100">Tracking</p>
+              </div>
+            </div>
           </div>
 
           {/* stats */}
@@ -143,10 +169,32 @@ export default function Login() {
             <p className="text-slate-500 text-xs font-medium mt-1">Sistem Informasi Manajemen Infrastruktur</p>
           </div>
 
-          <div className="max-w-sm w-full mx-auto">
+          <div
+                className="
+                max-w-md
+                w-full
+                mx-auto
+                bg-white
+                rounded-[32px]
+                border
+                border-slate-200
+                p-8
+                shadow-xl
+                shadow-slate-200/60
+              "
+              >
             <div className="mb-8">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Selamat datang</h2>
-              <p className="text-slate-400 text-sm font-medium mt-1.5">Masuk untuk melanjutkan ke dashboard.</p>
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold mb-4">
+                👋 Welcome Back
+              </div>
+
+              <h2 className="text-3xl font-black text-slate-900">
+                Selamat Datang
+              </h2>
+
+              <p className="text-slate-500 mt-2">
+                Masuk untuk mengakses dashboard dan memantau laporan infrastruktur.
+              </p>
             </div>
 
             {/* success */}
@@ -174,7 +222,7 @@ export default function Login() {
                 <div className={`relative flex items-center rounded-2xl border-2 transition-all duration-200 ${
                   focused === 'email'
                     ? 'border-indigo-500 bg-indigo-50/30 shadow-[0_0_0_4px_rgba(99,102,241,0.08)]'
-                    : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
+                    : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-md'
                 }`}>
                   <div className="absolute left-4 text-slate-400">
                     <Mail size={16} />
@@ -233,7 +281,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2.5 bg-[#1e3a8a] hover:bg-[#172554] active:scale-[0.98] text-white font-black text-sm py-4 rounded-2xl transition-all duration-200 shadow-lg shadow-indigo-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 active:scale-[0.98] text-white font-black text-sm py-4 rounded-2xl transition-all duration-200 shadow-lg shadow-indigo-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
