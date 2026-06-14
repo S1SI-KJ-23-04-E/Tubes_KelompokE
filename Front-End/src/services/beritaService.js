@@ -1,19 +1,7 @@
-import { supabase } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
-
-async function getValidToken() {
-  const { data: { session } = {} } = await supabase.auth.getSession();
-  let token = session?.access_token;
-
-  if (!token && typeof supabase.auth.refreshSession === 'function') {
-    const refreshResult = await supabase.auth.refreshSession();
-    token = refreshResult.data?.session?.access_token;
-  }
-
-  return token;
-}
 
 export async function createBerita(payload, imageFile) {
   try {

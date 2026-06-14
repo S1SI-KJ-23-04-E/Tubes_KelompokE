@@ -14,7 +14,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { StatusUpdateModal, AlertModal } from '../components/Modals';
-import { supabase } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 
 /* ─────────────── CONFIGS ─────────────── */
 const STATUS_MAP = {
@@ -207,10 +207,10 @@ export default function LaporanDetail() {
   const handleUpdatePriority = async (priority) => {
     try {
       setActionLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const token = await getValidToken();
       await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api'}/admin/laporan/${id}/prioritas`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token || ''}` },
         body: JSON.stringify({ prioritas: priority.toLowerCase() })
       });
       loadData();

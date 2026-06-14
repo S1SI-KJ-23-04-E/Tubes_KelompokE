@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createBerita, getAllBerita, updateBerita, deleteBerita } from '../services/beritaService';
 import { DeleteConfirmModal } from '../components/Modals';
-import { FileText, Plus, PanelLeftClose, PanelLeftOpen, PenSquare, Clock, Globe, Inbox, Activity, CheckCircle2, AlertTriangle, Search, Trash2, Eye, XCircle, ArrowRight } from 'lucide-react';
+import { FileText, Plus, PanelLeftClose, PanelLeftOpen, PenSquare, Clock, Globe, Inbox, Activity, CheckCircle2, AlertTriangle, Search, Trash2, Eye, XCircle, ArrowRight, Copy, BarChart3 } from 'lucide-react';
 
 function EditBeritaModal({ isOpen, berita, onClose, onSubmit }) {
   const [judul, setJudul] = useState('');
@@ -231,24 +231,35 @@ function BeritaPage() {
   const [selectedDetailNews, setSelectedDetailNews] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  const isAdmin = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
+  const isAdmin    = profile?.role === 'kecamatan' || profile?.role === 'petugas' || profile?.role === 'super_admin';
+  const canModerate = profile?.role === 'kecamatan' || profile?.role === 'super_admin';
 
   const wargaTabs = [
     { id: 'buat', label: 'Buat Laporan', icon: PenSquare, path: '/laporan?tab=buat' },
     { id: 'history', label: 'History Saya', icon: Clock, path: '/laporan?tab=history' },
     { id: 'publik', label: 'Laporan Publik', icon: Globe, path: '/laporan?tab=publik' },
   ];
-  const adminTabsList = [
+
+  const adminTabsList = [];
+  if (profile?.role === 'super_admin') {
+    adminTabsList.push({ id: 'dashboard', label: 'Dashboard Analytics', icon: BarChart3, path: '/laporan?tab=dashboard' });
+  }
+  if (profile?.role === 'kecamatan') {
+    adminTabsList.push({ id: '__dashboard_kecamatan__', label: 'Dashboard Penugasan', icon: BarChart3, path: '/laporan?tab=__dashboard_kecamatan__' });
+  }
+  adminTabsList.push(
     { id: 'masuk', label: 'Laporan Masuk', icon: Inbox, path: '/laporan?tab=masuk' },
     { id: 'progress', label: 'Laporan Progress', icon: Activity, path: '/laporan?tab=progress' },
     { id: 'selesai', label: 'Laporan Selesai', icon: CheckCircle2, path: '/laporan?tab=selesai' },
-  ];
-  if (isAdmin) {
-    adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle });
+  );
+  if (canModerate) {
+    adminTabsList.push({ id: 'kendala', label: 'Kendala Lapangan', icon: AlertTriangle, path: '/laporan?tab=kendala' });
+    adminTabsList.push({ id: 'duplikat', label: 'Deteksi Duplikat', icon: Copy, path: '/laporan?tab=duplikat' });
   }
 
+  const beritaTab = { id: 'berita', label: 'Berita', icon: FileText, path: '/berita' };
   const sidebarTabs = [
-    { id: 'berita', label: 'Berita Informasi', icon: FileText },
+    beritaTab,
     ...(isAdmin ? adminTabsList : wargaTabs),
   ];
 
@@ -360,7 +371,7 @@ function BeritaPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className={`shrink-0 bg-white border-r border-slate-100 pt-6 flex flex-col shadow-sm transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-64 px-4' : 'w-[68px] px-2'}`}>
+      <aside className={`shrink-0 bg-white border-r border-slate-100 pt-6 flex flex-col shadow-sm animate-slide-in-left transition-all duration-300 ease-in-out ${sidebarExpanded ? 'w-64 px-4' : 'w-[68px] px-2'}`}>
         <button
           onClick={() => setSidebarExpanded(!sidebarExpanded)}
           className="flex items-center justify-center w-full mb-4 p-2.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200 active:scale-95"
@@ -370,7 +381,9 @@ function BeritaPage() {
         </button>
 
         {sidebarExpanded && (
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-3">Admin Panel</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-3 animate-fade-in">
+            {isAdmin ? 'Admin Panel' : 'Navigasi'}
+          </p>
         )}
 
         <div className="flex flex-col gap-1">
@@ -384,9 +397,9 @@ function BeritaPage() {
                   navigate(tab.path);
                 }
               }}
-              className={`flex items-center ${sidebarExpanded ? 'gap-3 px-4' : 'justify-center px-0'} w-full py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${activeMenu === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105' : 'text-slate-600 hover:bg-slate-100 hover:translate-x-1'}`}
+              className={`flex items-center ${sidebarExpanded ? 'gap-3 px-4' : 'justify-center px-0'} w-full py-3 rounded-xl text-sm font-semibold transition-all duration-300 animate-fade-in-up ${activeMenu === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105' : 'text-slate-600 hover:bg-slate-100 hover:translate-x-1'}`}
               title={!sidebarExpanded ? tab.label : undefined}
-              style={{ animationDelay: `${idx * 40}ms` }}
+              style={{ animationDelay: `${idx * 50}ms` }}
             >
               <tab.icon size={17} />
               {sidebarExpanded && <span className="whitespace-nowrap">{tab.label}</span>}

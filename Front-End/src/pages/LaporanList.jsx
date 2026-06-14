@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import {
   getLaporanByUser,
   getAllLaporan,
@@ -64,10 +64,6 @@ const PRIORITY_CONFIG = {
 
 const ROW_OPTIONS = [9, 12, 16];
 
-async function getValidToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
-}
 
 /* ═══════════════════════════════════════════════════════
    PAGINATION COMPONENT
@@ -440,7 +436,8 @@ export default function LaporanList() {
   // ─── NOTIFIKASI TIDAK DITAMBAHKAN KE SIDEBAR ───
   // Petugas mengakses notifikasi via bell icon di navbar → ?tab=notifikasi
 
-  const tabs = isAdmin ? adminTabsList : wargaTabs;
+  const beritaTab = { id: 'berita', label: 'Berita', icon: FileText, path: '/berita' };
+  const tabs = [beritaTab, ...(isAdmin ? adminTabsList : wargaTabs)];
 
   const getPageTitle = () => {
     if (profile?.role === 'super_admin' && activeTab === 'dashboard')   return 'Dashboard Super Admin';
@@ -495,7 +492,7 @@ export default function LaporanList() {
           {tabs.map((t, idx) => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id)}
+              onClick={() => (t.path ? navigate(t.path) : setActiveTab(t.id))}
               className={`flex items-center ${sidebarExpanded ? 'gap-3 px-4' : 'justify-center px-0'} w-full py-3 rounded-xl text-sm font-semibold transition-all duration-300 animate-fade-in-up ${
                 activeTab === t.id
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105'

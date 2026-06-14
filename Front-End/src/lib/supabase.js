@@ -18,14 +18,17 @@ export const supabase = createClient(
 export async function getValidToken() {
   try {
     const { data: { session } = {} } = await supabase.auth.getSession();
-    let token = session?.access_token;
+    if (!session) return null;
 
-    if (!token && typeof supabase.auth.refreshSession === 'function') {
-      const refreshResult = await supabase.auth.refreshSession();
-      token = refreshResult.data?.session?.access_token;
+    // Check if token is expired or close to expiration (expires within 60 seconds)
+    const isExpired = session.expires_at && (session.expires_at * 1000 < Date.now() + 60000);
+    if (isExpired && typeof supabase.auth.refreshSession === 'function') {
+      const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      return refreshedSession?.access_token ?? null;
     }
 
-    return token;
+    return session.access_token ?? null;
   } catch (err) {
     console.warn('getValidToken error:', err?.message || err);
     return null;

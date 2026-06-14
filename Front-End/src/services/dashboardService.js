@@ -1,5 +1,4 @@
-import { supabase }
-from "../lib/supabase";
+import { supabase, getValidToken } from "../lib/supabase";
 
 const API_URL =
   "http://localhost:8001/api/dashboard";
@@ -7,13 +6,8 @@ const API_URL =
 export const getPerformanceDashboard =
   async () => {
 
-    // ambil session login
-    const {
-      data: { session }
-    } =
-      await supabase.auth.getSession();
-
-    if (!session) {
+    const token = await getValidToken();
+    if (!token) {
       throw new Error(
         "User belum login"
       );
@@ -25,7 +19,7 @@ export const getPerformanceDashboard =
         {
           headers: {
             Authorization:
-              `Bearer ${session.access_token}`
+              `Bearer ${token}`
           }
         }
       );

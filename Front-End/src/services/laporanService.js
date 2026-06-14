@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
@@ -387,17 +387,14 @@ export async function updateLaporanStatus(id, newStatus, fileBukti = null, keter
 
 export async function updateCatatanLaporan(id, catatan) {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) throw new Error('Anda belum login.');
+    const token = await getValidToken();
+    if (!token) throw new Error('Anda belum login.');
 
     const res = await fetch(`${API_URL}/admin/laporan/${id}/catatan`, {
       method:  'PUT',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ catatan }),
     });
@@ -480,14 +477,11 @@ export async function getKendalaByKecamatan(kecamatanId) {
 
 export async function checkUserUpvoted(laporanId) {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) return { success: true, upvoted: false };
+    const token = await getValidToken();
+    if (!token) return { success: true, upvoted: false };
 
     const res = await fetch(`${API_URL}/laporan/${laporanId}/upvote/check`, {
-      headers: { 'Authorization': `Bearer ${session.access_token}` },
+      headers: { 'Authorization': `Bearer ${token}` },
     });
 
     if (!res.ok) {
@@ -504,17 +498,14 @@ export async function checkUserUpvoted(laporanId) {
 
 export async function upvoteLaporan(laporanId) {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) throw new Error('Silakan login terlebih dahulu untuk memberikan dukungan.');
+    const token = await getValidToken();
+    if (!token) throw new Error('Silakan login terlebih dahulu untuk memberikan dukungan.');
 
     const res = await fetch(`${API_URL}/laporan/${laporanId}/upvote`, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -538,15 +529,12 @@ export async function upvoteLaporan(laporanId) {
  */
 export async function getDuplicateGroups(kecamatanId, radius = 50) {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) throw new Error('Anda belum login.');
+    const token = await getValidToken();
+    if (!token) throw new Error('Anda belum login.');
 
     const res = await fetch(
       `${API_URL}/admin/duplicate/${kecamatanId}?radius=${radius}`,
-      { headers: { 'Authorization': `Bearer ${session.access_token}` } }
+      { headers: { 'Authorization': `Bearer ${token}` } }
     );
 
     const json = await res.json();
@@ -572,17 +560,14 @@ export async function getDuplicateGroups(kecamatanId, radius = 50) {
  */
 export async function mergeLaporan(primaryId, secondaryIds) {
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) throw new Error('Anda belum login.');
+    const token = await getValidToken();
+    if (!token) throw new Error('Anda belum login.');
 
     const res = await fetch(`${API_URL}/admin/duplicate/merge`, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         primary_id:    primaryId,
