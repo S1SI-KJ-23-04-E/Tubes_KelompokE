@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getLaporanByKecamatan, getKendalaByKecamatan } from "../services/laporanService";
 import {
@@ -61,38 +61,52 @@ function getDaysOld(dateStr) {
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, sub, accent = "indigo", pulse = false }) {
+function StatCard({ icon: Icon, label, value, sub, accent = "indigo", pulse = false, onClick }) {
   const accents = {
-    indigo:  { iconBg: "bg-indigo-600",  shadow: "shadow-indigo-100",  ring: "ring-indigo-100",  blob: "bg-indigo-50"  },
-    amber:   { iconBg: "bg-amber-500",   shadow: "shadow-amber-100",   ring: "ring-amber-100",   blob: "bg-amber-50"   },
-    blue:    { iconBg: "bg-blue-600",    shadow: "shadow-blue-100",    ring: "ring-blue-100",    blob: "bg-blue-50"    },
-    emerald: { iconBg: "bg-emerald-600", shadow: "shadow-emerald-100", ring: "ring-emerald-100", blob: "bg-emerald-50" },
-    red:     { iconBg: "bg-red-500",     shadow: "shadow-red-100",     ring: "ring-red-100",     blob: "bg-red-50"     },
-    violet:  { iconBg: "bg-violet-600",  shadow: "shadow-violet-100",  ring: "ring-violet-100",  blob: "bg-violet-50"  },
+    indigo:  { iconBg: "bg-indigo-600",  shadow: "shadow-indigo-100",  ring: "ring-indigo-100",  blob: "bg-indigo-50",  arrow: "text-indigo-400 group-hover:text-indigo-600"  },
+    amber:   { iconBg: "bg-amber-500",   shadow: "shadow-amber-100",   ring: "ring-amber-100",   blob: "bg-amber-50",   arrow: "text-amber-300 group-hover:text-amber-500"   },
+    blue:    { iconBg: "bg-blue-600",    shadow: "shadow-blue-100",    ring: "ring-blue-100",    blob: "bg-blue-50",    arrow: "text-blue-300 group-hover:text-blue-500"    },
+    emerald: { iconBg: "bg-emerald-600", shadow: "shadow-emerald-100", ring: "ring-emerald-100", blob: "bg-emerald-50", arrow: "text-emerald-300 group-hover:text-emerald-500" },
+    red:     { iconBg: "bg-red-500",     shadow: "shadow-red-100",     ring: "ring-red-100",     blob: "bg-red-50",     arrow: "text-red-300 group-hover:text-red-500"     },
+    violet:  { iconBg: "bg-violet-600",  shadow: "shadow-violet-100",  ring: "ring-violet-100",  blob: "bg-violet-50",  arrow: "text-violet-300 group-hover:text-violet-500"  },
   };
   const a = accents[accent] ?? accents.indigo;
 
+  const Tag = onClick ? "button" : "div";
+
   return (
-    <div className={`relative bg-white rounded-2xl border border-slate-100 shadow-lg ${a.shadow} p-5 flex flex-col gap-3 overflow-hidden group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300`}>
+    <Tag
+      onClick={onClick}
+      className={`relative bg-white rounded-2xl border border-slate-100 shadow-lg ${a.shadow} p-5 flex flex-col gap-3 overflow-hidden group hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 text-left w-full${
+        onClick ? " cursor-pointer active:scale-[0.98]" : ""
+      }`}
+    >
       {/* decorative blob */}
       <div className={`absolute -top-6 -right-6 w-24 h-24 ${a.blob} rounded-full opacity-60 group-hover:scale-110 transition-transform duration-500`} />
       <div className="flex items-start justify-between relative z-10">
         <div className={`w-10 h-10 rounded-xl ${a.iconBg} flex items-center justify-center text-white shadow-md ${a.shadow}`}>
           <Icon size={18} />
         </div>
-        {pulse && (
-          <span className="flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-lg">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            Aktif
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {pulse && (
+            <span className="flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Aktif
+            </span>
+          )}
+          {onClick && (
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg flex items-center gap-0.5 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 ${a.arrow}`}>
+              Lihat <ArrowUpRight size={10} />
+            </span>
+          )}
+        </div>
       </div>
       <div className="relative z-10">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
         <p className="text-3xl font-black text-slate-900 leading-none tabular-nums">{value}</p>
         {sub && <p className="text-xs text-slate-400 font-medium mt-1.5">{sub}</p>}
       </div>
-    </div>
+    </Tag>
   );
 }
 
@@ -177,6 +191,7 @@ function EmptyState({ icon: Icon, message }) {
 
 export default function AdminKecamatanDashboard() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [laporan, setLaporan]       = useState([]);
   const [kendala, setKendala]       = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -327,6 +342,7 @@ export default function AdminKecamatanDashboard() {
             sub="Belum ditangani"
             accent="amber"
             pulse={stats.pending > 0}
+            onClick={() => navigate("/laporan?tab=masuk")}
           />
           <StatCard
             icon={Activity}
@@ -334,6 +350,7 @@ export default function AdminKecamatanDashboard() {
             value={stats.proses}
             sub="Dalam penanganan"
             accent="blue"
+            onClick={() => navigate("/laporan?tab=progress")}
           />
           <StatCard
             icon={CheckCircle2}
@@ -341,6 +358,7 @@ export default function AdminKecamatanDashboard() {
             value={stats.done}
             sub={`${completionRate}% tingkat penyelesaian`}
             accent="emerald"
+            onClick={() => navigate("/laporan?tab=selesai")}
           />
         </div>
 
