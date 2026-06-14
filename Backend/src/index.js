@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin.js';
 import beritaRoutes from './routes/berita.js';
 import profileRoutes from './routes/profile.js';
 import dashboardRoutes from './routes/dashboard.js';
+import duplicateRoutes from './routes/duplicate.js';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -49,6 +50,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/berita', beritaRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/duplicate', duplicateRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({
