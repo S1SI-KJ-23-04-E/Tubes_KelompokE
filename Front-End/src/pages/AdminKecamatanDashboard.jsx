@@ -189,9 +189,15 @@ function EmptyState({ icon: Icon, message }) {
 
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 
-export default function AdminKecamatanDashboard() {
+export default function AdminKecamatanDashboard({ onNavigateTab }) {
   const { profile } = useAuth();
   const navigate = useNavigate();
+
+  const handleNav = (tab) => {
+    navigate(`/laporan?tab=${tab}`);
+    if (onNavigateTab) onNavigateTab(tab);
+  };
+
   const [laporan, setLaporan]       = useState([]);
   const [kendala, setKendala]       = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -339,6 +345,7 @@ export default function AdminKecamatanDashboard() {
             value={stats.total}
             sub={`Di Kec. ${kecamatanNama}`}
             accent="indigo"
+            onClick={() => handleNav("semua")}
           />
           <StatCard
             icon={Clock}
@@ -347,7 +354,7 @@ export default function AdminKecamatanDashboard() {
             sub="Belum ditangani"
             accent="amber"
             pulse={stats.pending > 0}
-            onClick={() => navigate("/laporan?tab=masuk")}
+            onClick={() => handleNav("masuk")}
           />
           <StatCard
             icon={Activity}
@@ -355,7 +362,7 @@ export default function AdminKecamatanDashboard() {
             value={stats.proses}
             sub="Dalam penanganan"
             accent="blue"
-            onClick={() => navigate("/laporan?tab=progress")}
+            onClick={() => handleNav("progress")}
           />
           <StatCard
             icon={CheckCircle2}
@@ -363,7 +370,7 @@ export default function AdminKecamatanDashboard() {
             value={stats.done}
             sub={`${completionRate}% tingkat penyelesaian`}
             accent="emerald"
-            onClick={() => navigate("/laporan?tab=selesai")}
+            onClick={() => handleNav("selesai")}
           />
         </div>
 
@@ -539,12 +546,12 @@ export default function AdminKecamatanDashboard() {
 
                     {laporan.length > 10 && (
                       <div className="px-5 py-3.5 border-t border-slate-50 bg-slate-50/50">
-                        <Link
-                          to="/laporan"
+                        <button
+                          onClick={() => handleNav("semua")}
                           className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
                         >
                           Lihat semua {laporan.length} laporan <ArrowUpRight size={12} />
-                        </Link>
+                        </button>
                       </div>
                     )}
                   </>
