@@ -200,7 +200,7 @@ export default function LaporanList() {
     searchParams.get('tab') || (isAdmin ? 'masuk' : 'buat')
   );
 
-  const adminTabs = new Set(['masuk', 'progress', 'selesai', 'dashboard', '__dashboard_kecamatan__']);
+  const adminTabs = new Set(['semua', 'masuk', 'progress', 'selesai', 'dashboard', '__dashboard_kecamatan__']);
   if (canModerate) {
     adminTabs.add('kendala');
     adminTabs.add('duplikat');
@@ -425,6 +425,7 @@ export default function LaporanList() {
     adminTabsList.push({ id: '__dashboard_kecamatan__', label: 'Dashboard Penugasan',  icon: BarChart3   });
   }
   adminTabsList.push(
+    { id: 'semua',    label: 'Semua Laporan',    icon: FileText     },
     { id: 'masuk',    label: 'Laporan Masuk',    icon: Inbox        },
     { id: 'progress', label: 'Laporan Progress', icon: Activity     },
     { id: 'selesai',  label: 'Laporan Selesai',  icon: CheckCircle2 },
@@ -443,6 +444,7 @@ export default function LaporanList() {
     if (profile?.role === 'super_admin' && activeTab === 'dashboard')   return 'Dashboard Super Admin';
     if (isAdmin) {
       if (activeTab === '__dashboard_kecamatan__') return 'Dashboard Penugasan';
+      if (resolvedAdminTab === 'semua')            return 'Semua Laporan';
       if (resolvedAdminTab === 'masuk')            return 'Laporan Masuk';
       if (resolvedAdminTab === 'progress')         return 'Laporan Progress';
       if (resolvedAdminTab === 'selesai')          return 'Laporan Selesai';
@@ -581,7 +583,7 @@ export default function LaporanList() {
           activeTab === 'dashboard' ? (
             <SuperAdminDashboard />
           ) : activeTab === '__dashboard_kecamatan__' ? (
-            <AdminKecamatanDashboard />
+            <AdminKecamatanDashboard onNavigateTab={setActiveTab} />
           ) : activeTab === 'notifikasi' ? (
             // ─── Tab notifikasi: hanya untuk petugas via bell icon navbar ───
             <NotifikasiPetugas />
@@ -714,6 +716,7 @@ function AdminView({ laporan, activeTab, onStatus, onPriority, onCatatan, profil
   };
 
   let filteredLaporan = laporan.filter((item) => {
+    if (activeTab === 'semua')    return true;
     if (activeTab === 'masuk')    return isPetugas ? item.status === 'verified'    : item.status === 'pending';
     if (activeTab === 'progress') return isPetugas ? item.status === 'in_progress' : ['verified', 'in_progress'].includes(item.status);
     if (activeTab === 'selesai')  return ['done', 'selesai', 'rejected'].includes(item.status);
