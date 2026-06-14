@@ -213,7 +213,12 @@ export default function AdminKecamatanDashboard() {
       ]);
       if (lapRes.success)     setLaporan(lapRes.data ?? []);
       else throw new Error(lapRes.error || "Gagal mengambil laporan");
-      if (kendalaRes.success) setKendala(kendalaRes.data ?? []);
+      if (kendalaRes.success) {
+        const activeKendala = (kendalaRes.data ?? []).filter(
+          (k) => k.laporan?.status !== 'done' && k.laporan?.status !== 'selesai'
+        );
+        setKendala(activeKendala);
+      }
       setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
